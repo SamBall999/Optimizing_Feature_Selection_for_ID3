@@ -1,7 +1,19 @@
 # main class
 
+import numpy as np
 import pandas as pd
-from id3 import id_3 # better way to do this?
+from id3 import ID3_Decision_Tree # better way to do this?
+#from tabu_hill_search import tabu_search
+#from genetic_algorithm import genetic_algorithm
+#from statistical_tests import hypothesis_test
+
+# Design decisions
+# 1. How to compare algorithms properly using statistical tests
+# - from lectures: often Mann-Whitney 
+# - (usually a two-sample situation since comparing algs A and B, usually performance results are not normally distributed but must check for this first, usually independent samples since starting positions random)
+# - choices: Chi-sq, Mann-Whitney, Median, Kolmogorov
+# - from paper: Wilcoxon test - implies samples are paired??
+# 2. How many times to run algorithms
 
 
 # how best to store these features and target?
@@ -43,7 +55,28 @@ def main():
     #entropy(data)
     #info_gain_A = get_information_gain(data, 95) # must it be string or number
     #print(info_gain_A)
-    id_3(data)
+    tree = ID3_Decision_Tree()
+    tree.id_3(data.iloc[:, : 5]) # test with a smaller subset to begin with, builds tree
+    # how do we test or print this tree?
+    tree.print_tree()
+    #prediction = tree.predict(data.head(1)) # try predict the first sample
+    #print(prediction)
+
+    #data = data[data[2]=='A']
+    #data = data[data[3]=='B']
+    #data = data[data[1]=='B']
+    #print(data.head(10))
+    #print(data.shape)
+    #print(np.count_nonzero(data["Target"].values == 'True', axis=0))
+
+
+
+    #from sklearn.metrics import accuracy_score
+
+    #print(accuracy_score(predictions, test.iloc[:,-1]))
+
+
+    
 
 if __name__ == "__main__":
     main()
