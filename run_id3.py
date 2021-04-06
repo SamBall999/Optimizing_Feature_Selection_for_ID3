@@ -3,6 +3,7 @@
 import numpy as np
 import pandas as pd
 from id3 import ID3_Decision_Tree # better way to do this?
+from testing import confusion_matrix
 #from tabu_hill_search import tabu_search
 #from genetic_algorithm import genetic_algorithm
 #from statistical_tests import hypothesis_test
@@ -31,7 +32,7 @@ def read_text_file(filename):
 
 # alternative - use pandas??
 def read_text_file_alt(filename):
-    print("\nReading in training dataset...")
+    
     data = pd.read_csv(filename, header = None) 
     # first separate features and targets
     features_and_target = data[0].str.split(pat=" ", expand=True)
@@ -51,29 +52,35 @@ def read_text_file_alt(filename):
 
 def main():
     print("Feature Optimization for ID3")
-    data = read_text_file_alt("./Data/Training_Data.txt")
-    #entropy(data)
-    #info_gain_A = get_information_gain(data, 95) # must it be string or number
-    #print(info_gain_A)
-    tree = ID3_Decision_Tree()
-    tree.id_3(data.iloc[:, : 5]) # test with a smaller subset to begin with, builds tree
+
+    print("\nReading in training dataset...")
+    training_data = read_text_file_alt("./Data/Training_Data.txt")
+
+    print(len(training_data[training_data["Target"]=="True"]))
+    print(len(training_data[training_data["Target"]=="False"]))
+
+    tree = ID3_Decision_Tree() # intialize decision tree
+    tree.id_3(training_data.iloc[:, : 40]) # test with a smaller subset to begin with, builds tree
     # how do we test or print this tree?
-    tree.print_tree()
-    #prediction = tree.predict(data.head(1)) # try predict the first sample
-    #print(prediction)
-
-    #data = data[data[2]=='A']
-    #data = data[data[3]=='B']
-    #data = data[data[1]=='B']
-    #print(data.head(10))
-    #print(data.shape)
-    #print(np.count_nonzero(data["Target"].values == 'True', axis=0))
-
+    #tree.print_tree()
+   
+    predictions = tree.predict_batch(training_data)
+    print(predictions)
+    targets = training_data["Target"].values
+    print(targets)
+    #print("\nPredicted value: {}".format(prediction))
+    #print("Actual value: {}".format(target))
+    confusion_matrix(targets, predictions)
 
 
-    #from sklearn.metrics import accuracy_score
+    print("Reading in Validation Data") # or should it be test data??
+    validation_data = read_text_file_alt("./Data/Validation_Data.txt")
 
-    #print(accuracy_score(predictions, test.iloc[:,-1]))
+    validation_predictions = tree.predict_batch(validation_data)
+    #print(validation_predictions)
+    validation_targets = validation_data["Target"].values
+    #print(validation_targets)
+    confusion_matrix(validation_targets, validation_predictions)
 
 
     

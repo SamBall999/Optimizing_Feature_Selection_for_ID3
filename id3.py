@@ -111,8 +111,8 @@ class ID3_Decision_Tree:
         # info gain has to do with how it is splitting the target True and Falses! NB to understand for theory part of report
         # find max info gain
         max_gain_feature  = max(information_gains, key=information_gains.get)
-        print(max_gain_feature)
-        print(information_gains[max_gain_feature])
+        #print(max_gain_feature)
+        #print(information_gains[max_gain_feature])
         return max_gain_feature
 
 
@@ -136,7 +136,7 @@ class ID3_Decision_Tree:
 
         # initialise nodes
         if not node:
-            print("Initialising node")
+            #print("Initialising node")
             node = Node() 
 
 
@@ -144,15 +144,15 @@ class ID3_Decision_Tree:
         output_classes = np.unique(data["Target"])
         #print(len(output_classes))
         if (len(output_classes)==1): 
-            print("Pure node") # we are never reaching pure node - too few features for now??
+            #print("Pure node") # we are never reaching pure node - too few features for now??
             node.value = output_classes[0]
             return node
 
 
         # if there are no more features available to split the data, choose most common/probable output
         if (len(feature_list) == 0):
-            print("No more features")
-            print(data['Target'].value_counts().idxmax())
+            #print("No more features")
+            print("Leaf node: {}".format(data['Target'].value_counts().idxmax()))
             node.value = data['Target'].value_counts().idxmax()
             return node
     
@@ -172,14 +172,14 @@ class ID3_Decision_Tree:
             node.children.append(child) # add child node to tree
             subset_i = data[data[max_info_gain_feature] == c] # find subset where feature = c
             if subset_i.empty: # if subset is empty
-                print(max(set(data["Target"]), key=data["Target"].count))
+                #print(max(set(data["Target"]), key=data["Target"].count))
                 child.next = max(set(data["Target"]), key=data["Target"].count) # leaf node with label being the most common/probable output
-                print('')
+                #print('')
             else:
                 # remove most recently used feature from feature list
                 #feature_list.remove(max_info_gain_feature)
                 feature_list = feature_list[feature_list != max_info_gain_feature]
-                print(feature_list)
+                #print(feature_list)
                 # recursively call the algorithm to build subtree
                 child.next = self.build_tree(subset_i, feature_list, child.next) # pass subset of the data to the next iteration/node
         return node
@@ -189,9 +189,10 @@ class ID3_Decision_Tree:
     def id_3(self, data):
 
         feature_list =  data.columns.values[2:] # ignore the index and target columns
-        print(feature_list)
+        print("Features {}:".format(feature_list))
+        print("Building tree...")
         self.node = self.build_tree(data, feature_list, self.node) # root
-        print(self.node) # node is now returned
+        #print(self.node) # node is now returned
 
 
 
@@ -213,31 +214,52 @@ class ID3_Decision_Tree:
                     #print(nodes)
             elif node.next:
                 print(node.next)
+    
+     
+
+    
+    
+    
+    
+    # use the tree that has been built to predict new samples
+    def predict(self, sample):
+
+        node = self.node
 
 
+        while(len(node.children) > 0): # while node we are on is not a leaf node
+            #print("Splitting Feature: {}".format(node.value))
+            splitting_feature = node.value
 
-    # need to be able to use the tree that has been built
-    """def predict(self, sample):
+      
+            for child in node.children:
+                feature_value = sample[splitting_feature].values[0]
+                if (feature_value==child.value):
+                    node = child.next # move to this child or move to next??
+                    break
+
+            # check this condition
+            if(node.children==None):
+                break
+            #else:
+                #print(len(node.children))
         
-	    node = self
+        return node.value
 
-	    while len(node.children) > 0:
-		    # Get the current splitting condition.
-		    split_con = node.children[0].value
-			
-		    for child in node.children:
-		    	data = child.data
-				
-			    # Get the first sample in this split
-			    first_sample = list(data.index)[0]
-				
-			    # Check if this child has the right value of the splitting
-			    # condition. If not, try another child.
-			    if sample[split_con][0] == node.data.loc[first_sample,:][split_con]:
-				    node = child
-				    break
 
-        return list(node.data[self.y_attr])[0]"""
+    
+    def predict_batch(self, samples):
+
+        print("\n Predicting...")
+
+        predictions = []
+        for i in range(samples.shape[0]):
+            #print(samples.iloc[[i]])
+            predictions.append(self.predict(samples.iloc[[i]]))
+        return predictions
+        
+        
+    
 
     
 
