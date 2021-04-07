@@ -2,12 +2,7 @@
 
 
 
-
-
-
-
-def confusion_matrix(targets, predictions):
-
+def calculate_rates(targets, predictions):
     TP = 0
     FP = 0
     TN = 0
@@ -25,14 +20,24 @@ def confusion_matrix(targets, predictions):
         if (predictions[i]=="False" and targets[i]!=predictions[i]):
            FN += 1
 
+    return(TP, FP, TN, FN)
+
+
+
+
+def confusion_matrix(targets, predictions):
+
+
+    TP, FP, TN, FN = calculate_rates(targets, predictions)
+
     print("\n")
     print("-----------------------------------")
     print("|                 Predicted       |")
     print("|---------------------------------|")
     print("|        |        True     False  |")
     #print("-------------------------")
-    print("| Actual | True    {}       {}    |".format(TP, FN))
-    print("|        | False   {}       {}    |".format(FP, TN))
+    print("| Actual | True    {}      {}    |".format(TP, FN))
+    print("|        | False   {}      {}    |".format(FP, TN))
     print("-----------------------------------")
     print("\n")
     
@@ -48,6 +53,7 @@ def confusion_matrix(targets, predictions):
 
 # Accuracy - measures overall accuracy of the model classification
 def accuracy(TP, FP, TN, FN):
+
 
     if ((TN + FP + FN + TP) ==0):
         return -1

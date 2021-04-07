@@ -152,7 +152,7 @@ class ID3_Decision_Tree:
         # if there are no more features available to split the data, choose most common/probable output
         if (len(feature_list) == 0):
             #print("No more features")
-            print("Leaf node: {}".format(data['Target'].value_counts().idxmax()))
+            #print("Leaf node: {}".format(data['Target'].value_counts().idxmax()))
             node.value = data['Target'].value_counts().idxmax()
             return node
     
@@ -188,8 +188,9 @@ class ID3_Decision_Tree:
 
     def id_3(self, data):
 
-        feature_list =  data.columns.values[2:] # ignore the index and target columns
-        print("Features {}:".format(feature_list))
+        #print(data)
+        feature_list =  data.columns.values[:-1] # ignore the index and target columns
+        print("Features: {}".format(feature_list))
         print("Building tree...")
         self.node = self.build_tree(data, feature_list, self.node) # root
         #print(self.node) # node is now returned
@@ -250,7 +251,7 @@ class ID3_Decision_Tree:
     
     def predict_batch(self, samples):
 
-        print("\n Predicting...")
+        print("Predicting...")
 
         predictions = []
         for i in range(samples.shape[0]):
