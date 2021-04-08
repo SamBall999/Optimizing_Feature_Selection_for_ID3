@@ -41,10 +41,11 @@ def objective_function(candidate_x, training_data, validation_data):
 
     # TO DO: need to process the bitstring candidate x into the indices of which features to include
     # convert from string to array if it is not in array form?
-    print("\nCandidate x: {}".format(candidate_x))
+    #print("\nCandidate x: {}".format(candidate_x))
 
 
     # find positions of 1's in the bitstring
+    # what happens to the brackets?? ignored because of ==1??
     feature_indices = [(i+1) for i in range(len(candidate_x)) if candidate_x[i]==1]# be careful whether it is the index or the name of the feature
     feature_indices.append(-1) # append -1 in order to get Target column
     # +1 added to account for features starting at 1 not 0 
@@ -53,17 +54,18 @@ def objective_function(candidate_x, training_data, validation_data):
 
     tree.id_3(training_data.iloc[:, feature_indices]) # how to input the correct feature subset??
    
-    predictions = tree.predict_batch(training_data)
-    targets = training_data["Target"].values
-    TP, FP, TN, FN = calculate_rates(targets, predictions)
-    training_accuracy = accuracy(TP, FP, TN, FN)
-    print("Training Accuracy: {}".format(training_accuracy))
+    # can calculate the training accuracy to check things
+    #predictions = tree.predict_batch(training_data)
+    #targets = training_data["Target"].values
+    #TP, FP, TN, FN = calculate_rates(targets, predictions)
+    #training_accuracy = accuracy(TP, FP, TN, FN)
+    #print("Training Accuracy: {}".format(training_accuracy))
 
     validation_predictions = tree.predict_batch(validation_data)
     validation_targets = validation_data["Target"].values
     TP, FP, TN, FN = calculate_rates(validation_targets, validation_predictions)
     validation_accuracy = accuracy(TP, FP, TN, FN)
-    print("Validation Accuracy: {}".format(validation_accuracy))
+    #print("Validation Accuracy: {}".format(validation_accuracy))
 
     fitness = validation_accuracy
 
@@ -71,14 +73,15 @@ def objective_function(candidate_x, training_data, validation_data):
 
 
 # can we increase efficiency e.g. list comprehension??
-def get_fitnesses(neighbourhood, training_data, validation_data):
+def get_fitnesses(neighbourhood, training_data, validation_data, tabu_list):
     fitnesses = {}
     for neighbour in neighbourhood:
-        fitness = objective_function(neighbour, training_data, validation_data)
         neighbour_string = str(neighbour)
-        #print(neighbour_string) # need to convert neighbour array to a string in order to be a key
-        #print(fitness)
-        fitnesses[neighbour_string] = fitness # add dictionary entry
+        neighbour_string = neighbour_string.replace(" ", "")
+        if ((neighbour_string not in tabu_list) and (np.sum(neighbour) != 0)): # only evaluate neighbours that are not on the tabu list and that have at least one feature
+            fitness = objective_function(neighbour, training_data, validation_data)
+            fitnesses[neighbour_string] = fitness # add dictionary entry
+    print("No. of neighbours: {}".format(len(fitnesses)))
     return fitnesses
 
 
@@ -104,7 +107,9 @@ def one_flip(x, index):
 # NB why is current_x changing?????
 def find_neighbourhood(current_x):
 
-    print("Neighbourhood")
+    #neighbourhood = [one_flip(current_x, i) for i in range(len(current_x))]
+    
+    #print("Neighbourhood")
     neighbourhood = []
     for i in range(len(current_x)):
         x_copy = current_x
@@ -145,32 +150,65 @@ def mark_tabu(tabu_list, element):
 # possibly implement just hill search first and then add tabu part
 # note consider that function evaluations are usually your computational currency - don't repeat them
 # note this is a 'best improvement (greedy)' hill climber - should we use first improvement to save function evals??
+# thoughts on adding aspiration criteria??
+# The procedure will select the best local candidate (although it has worse fitness than the sBest) in order to escape the local optimal.
+# his process continues until the user specified stopping criterion is met, at which point, the best solution seen during the search process is returned
+# keep a separate ultimate best but still allow to escape local optima
 def tabu_search(training_data, validation_data):
     
-    local_optimum = 0 # set local optimum to be false to begin within
-    n_x = 10 # number of features = 100 (for now we use 10)
+    #local_optimum = 0 # set local optimum to be false to begin within
+    #n_x = 10 # number of features = 100 (for now we use 10)
+    n_x = 8
 
     # define starting point - bitstring of 0's and 1's of length n_x
     x_current = np.random.randint(0, 2, n_x) # choose randomnly from a distribution (all poss starting points)
     print("Starting position: {} \n".format(x_current))
+    x_best = x_current # absolute best
 
-    neighbours = find_neighbourhood(x_current)
-    fitnesses = get_fitnesses(neighbours, training_data, validation_data) # initial neighbouring fitnesses
+    #neighbours = find_neighbourhood(x_current)
+    #fitnesses = get_fitnesses(neighbours, training_data, validation_data) # initial neighbouring fitnesses
 
-    while (is_local_optimum(x_current, fitnesses) == 0): # while a local optimum has not been reached - is this the correct stopping condition?
-        current_fitness = objective_function(x_current, training_data, validation_data)
-        print("\nCurrent fitness: {}".format(current_fitness))
+    t, t_max = 0, 1 # initialize number of iterations and max iterations
+    #t_max = 6 # max iterations
+
+    tabu_list = []
+    tabu_list.append(str(x_current).replace(" ", ""))
+    print(tabu_list)
+    max_tabu_size = 4
+
+    #while (is_local_optimum(x_current, fitnesses) == 0): # while a local optimum has not been reached - is this the correct stopping condition?
+    while (t < t_max):
+
+        print("\n-------Iteration {}--------".format(t))
+        
         # calculate fitness for all elements in neighbourhood
         neighbours = find_neighbourhood(x_current)
-        fitnesses = get_fitnesses(neighbours, training_data, validation_data) # includes current x or not?
+        fitnesses = get_fitnesses(neighbours, training_data, validation_data, tabu_list) # includes current x or not?
         #x_candidate = argmax(fitnesses) # candidate solutions must be mapped to fitnesses properly
-        x_candidate = max(fitnesses, key=fitnesses.get) # candidate solution with best fitness
-        print("\nCandidate fitness: {}".format(fitnesses[x_candidate]))
-        if (fitnesses[x_candidate] > current_fitness):
+
+        best_fitness = objective_function(x_best, training_data, validation_data)
+        print("\nBest fitness: {}".format(best_fitness))
+        x_candidate_string = max(fitnesses, key=fitnesses.get) # candidate solution with best fitness
+        print("\nCandidate fitness: {}".format(fitnesses[x_candidate_string]))
+
+        # always update x_current with x_candidate?? (has tabu list already been checked)
+        x_current = np.array(list(x_candidate_string[1:-1]), dtype=int)
+        print("New current x: {}".format(x_current))
+
+        # update absolute best if fitness is greater
+        if (fitnesses[x_candidate_string] > best_fitness):
             # need to covert back to array from string??
-            if(x_candidate not in tabu_list):
-                x_current = x_candidate
-                print("New current x: {}".format(x_current))
+            if(x_candidate_string not in tabu_list): # is this check redundant?
+                print(np.array(list(x_candidate_string[1:-1]), dtype=int))
+                # change back to numpy array
+                x_best = np.array(list(x_candidate_string[1:-1]), dtype=int)
+                print("New best x: {}".format(x_best))
+
+        tabu_list.append(x_candidate_string)
+        if (len(tabu_list) > max_tabu_size):
+            tabu_list = tabu_list[1:] # or use pop?
+        print(tabu_list)
+        t +=1 
 
 
 
@@ -212,3 +250,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -37,13 +37,13 @@ def read_text_file_alt(filename):
     # first separate features and targets
     features_and_target = data[0].str.split(pat=" ", expand=True)
     data["Features"] = features_and_target[0]
-    data["Target"] = features_and_target[1]
     # split features into their own columns
     split_features = data["Features"].str.split(pat="", expand=True)
     for i in range(split_features.shape[1]-1):
         data[i] = split_features[i] # does this index the column??
 
     data.drop(columns =["Features"], inplace = True) # drop old features column
+    data["Target"] = features_and_target[1]
     print(data.head())
     return data
 
@@ -56,21 +56,22 @@ def main():
     print("\nReading in training dataset...")
     training_data = read_text_file_alt("./Data/Training_Data.txt")
 
-    print(len(training_data[training_data["Target"]=="True"]))
-    print(len(training_data[training_data["Target"]=="False"]))
+    #print(len(training_data[training_data["Target"]=="True"]))
+    #print(len(training_data[training_data["Target"]=="False"]))
 
     tree = ID3_Decision_Tree() # intialize decision tree
-    tree.id_3(training_data.iloc[:, : 40]) # test with a smaller subset to begin with, builds tree
+    #tree.id_3(training_data.iloc[:, : 40]) # test with a smaller subset to begin with, builds tree
+    tree.id_3(training_data.iloc[:, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -1]]) # don't forget to include target
     # how do we test or print this tree?
     #tree.print_tree()
    
-    predictions = tree.predict_batch(training_data)
-    print(predictions)
-    targets = training_data["Target"].values
-    print(targets)
+    #predictions = tree.predict_batch(training_data)
+    #print(predictions)
+    #targets = training_data["Target"].values
+    #print(targets)
     #print("\nPredicted value: {}".format(prediction))
     #print("Actual value: {}".format(target))
-    confusion_matrix(targets, predictions)
+    #confusion_matrix(targets, predictions)
 
 
     print("Reading in Validation Data") # or should it be test data??
@@ -80,7 +81,7 @@ def main():
     #print(validation_predictions)
     validation_targets = validation_data["Target"].values
     #print(validation_targets)
-    confusion_matrix(validation_targets, validation_predictions)
+    #confusion_matrix(validation_targets, validation_predictions)
 
 
     
