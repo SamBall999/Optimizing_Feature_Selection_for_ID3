@@ -1,4 +1,16 @@
 # Hypothesis testing and metrics
+from scipy.stats import mannwhitneyu
+
+
+
+
+
+def mann_whitney(tabu_data, ga_data):
+    tabu_data = []
+    ga_data = []
+    stat, p = mannwhitneyu(tabu_data, ga_data)
+    print(stat)
+    print(p)
 
 
 
