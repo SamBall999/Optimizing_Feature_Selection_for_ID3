@@ -1,72 +1,55 @@
 import numpy as np
 import pandas as pd
-from id3 import ID3_Decision_Tree # better way to do this?
+from custom_id3 import ID3_Decision_Tree
 from testing import calculate_rates, accuracy
 
+
 #----GENETIC ALGORITHM (GA)----#
-
-# Design decisions:
-# 1. Type of selection operators - (i) select parents, (ii) select individuals to keep in population
-# 2. Type of crossover
-# 3. Type of mutation
-# 4. How to encode chromosomes
-
-# Control parameters
-# 1. Population size
-# 2. Mutation rate pm
-# 3. Crossover rate pc
-# 4. Dynamic mutation rates
 
 
 # potential downside of GA compared to tabu -> more function evals
 
 
-# ENCODING PROBLEM
-# Each solution is encoded as a bitstring of length no_features
-# Each bit in the bit string indicates whether that features is chosen or not
-
-# many combinatorial problems can easily be encoded as bitstrings
-def encode_chromosome():
-    return chromosome
 
 # calculates fitness of current position = ability of individual to survive
-# The genetic algorithm is designed to optimize two objectives: maximize classification accuracy of the feature subset and minimize the number of features selected. 
-# To do so, we define the following fitness function:
-# F = w ∗ c(x) + (1 − w) ∗ (1/s(x)) # or just validation (generalisation) error??
+# Objectives: maximize classification accuracy of the feature subset. 
 def fitness_function(individual, training_data, validation_data):
-    #w = 0.9
-    # num features
-    #num_features = np.sum(individual) # no of 1's = no of features
-    # how do we obtain accuracy? - need to call the decision tree using this subset of features!
-    #fitness = w*accuracy + (1 − w)*(1/num_features)
-
-    #print(individual)
  
+    # check that feature subset contains at least one feature
     if (np.sum(individual) == 0): # if no features
         return 0
+    
+    # get selected features from the bitvector encoding
+    feature_indices = [(i+1) for i in range(len(individual)) if individual[i]==1]
+    feature_list =  training_data.columns.values[feature_indices] # wholelist or only some?
+    
+    # convert x and y data to numpy arrays
+    x = np.array(training_data.drop("Target", axis=1).copy())
+    y = np.array(training_data["Target"])
+    
+    # create decision tree with given subset
+    tree = ID3_Decision_Tree(x, y) # intialize decision tree
+    tree.id_3(feature_list) # build tree
 
-    tree = ID3_Decision_Tree() # intialize decision tree
-
-    feature_indices = [(i+1) for i in range(len(individual)) if individual[i]==1]# be careful whether it is the index or the name of the feature
-    feature_indices.append(-1) # append -1 in order to get Target column
-    # +1 added to account for features starting at 1 not 0 
-
-    #print(training_data.iloc[: , feature_indices]) # need to also add target column!!
-
-    tree.id_3(training_data.iloc[:, feature_indices]) # how to input the correct feature subset??
    
-    predictions = tree.predict_batch(training_data)
-    targets = training_data["Target"].values
-    TP, FP, TN, FN = calculate_rates(targets, predictions)
-    training_accuracy = accuracy(TP, FP, TN, FN)
+    # verify if training accuracy is 100% (overfitting is occurring)
+    #predictions = tree.predict_batch(training_data)
+    #predictions = tree.predict_batch(x)
+    #targets = training_data["Target"].values
+    #TP, FP, TN, FN = calculate_rates(targets, predictions)
+    #training_accuracy = accuracy(TP, FP, TN, FN)
     #print("Training Accuracy: {}".format(training_accuracy))
 
-    validation_predictions = tree.predict_batch(validation_data)
+
+    # calculate accuracy on the validation set
+    X_val = np.array(validation_data.drop("Target", axis=1).copy())
+    validation_predictions = tree.predict_batch(X_val)
     validation_targets = validation_data["Target"].values
     TP, FP, TN, FN = calculate_rates(validation_targets, validation_predictions)
     validation_accuracy = accuracy(TP, FP, TN, FN)
     #print("Validation Accuracy: {}".format(validation_accuracy))
 
+    # fitness is measured by validation accuracy
     fitness = validation_accuracy
 
     return fitness
@@ -76,8 +59,6 @@ def fitness_function(individual, training_data, validation_data):
 # single point 
 def single_point_crossover_mask(n_x):
 
-    #possible_points = np.arange(1, n_x)
-    #crossover_points = np.random.choice(possible_points,  2, replace = False) #np.random.randint(1, n_x, 2)# select crossover points, no replacement
     crossover_point = np.random.randint(1, n_x, 1)
 
     #print(crossover_point)
@@ -118,7 +99,7 @@ def two_point_crossover_mask(n_x):
 # also try single point crossover
 def bitstring_crossover(parent_1, parent_2, n_x):
 
-    print("crossover")
+    print("Crossover")
 
     # init children
     child_1 = parent_1.copy() # copies are not independent?
@@ -139,10 +120,9 @@ def bitstring_crossover(parent_1, parent_2, n_x):
 
 # introduce new genetic material
 # random mutation -> apply p_m to each bit
-# is the chromosome a string or an array?
 def mutate(chromosome, p_m):
 
-    print("mutation")
+    print("Mutation")
 
     for i in range(len(chromosome)):
         r = np.random.uniform(0, 1)
@@ -170,7 +150,7 @@ def proportional_probability(individual, fitness_sum, population_fitnesses):
 # Roulette wheel selection -> can also try more balanced variant: stochastic universal sampling
 def roulette_wheel_selection(population, fitness_sum, population_fitnesses):
 
-    print("roulette")
+    print("Roulette selection")
 
 
     i = 0 # first chromosome
@@ -196,7 +176,7 @@ def roulette_wheel_selection(population, fitness_sum, population_fitnesses):
 # (i) Roulette wheel selection - with or without replacement??
 def parent_selection(population, population_fitnesses):
 
-    print("selection")
+    print("Parent selection")
     # how many parents to select?? - for now we select 2 parents -> 2 children
     # therefore select no. of parents = half of pop?
     num_parents = int(len(population)/2)
@@ -216,6 +196,40 @@ def parent_selection(population, population_fitnesses):
     return p # selected parents
 
 
+# try to have fewest fucntion evals possible
+def select_new_gen(parents, children, population, population_fitnesses, training_data, validation_data):
+
+    new_generation = []
+    no_children =  len(children)
+    sorted_parents = sorted(population_fitnesses, key=population_fitnesses.get, reverse=False)
+
+    print(sorted_parents)
+    
+    #print(parent, population_fitnesses[parent])
+    
+    i = 0
+    for c in children:
+        child_fitness = fitness_function(c, training_data, validation_data)
+        for i in range(len(parents)):
+            if (child_fitness > population_fitnesses[sorted_parents[i]]):
+                new_generation.append(c)
+                break
+    
+    num_new_individuals = len(new_generation)
+    print(num_new_individuals)
+    print(sorted_parents[num_new_individuals:])
+    for parent in sorted_parents[num_new_individuals:]:
+        parent_array = np.array(list(parent[1:-1]), dtype=int)
+        new_generation.append(parent_array)
+    print(new_generation) # what about remaining population who were not parents??
+    remaining_pop = [i for i in population if str(i).replace(" ", "") not in sorted_parents]
+    print(remaining_pop)
+    new_generation.append(remaining_pop)
+
+    return new_generation
+
+    #child_fitness = fitness_function(child, training_data, validation_data)
+
 
 
 def reproduction(population, population_fitnesses, p_c, p_m, training_data, validation_data):
@@ -228,8 +242,10 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
     n_x = len(population[0]) # number of features
     #print("No. of features {}".format(n_x))
 
+    all_children = []
+
     # perform crossover using selected parents
-    new_generation = []
+    #new_generation = []
     i = 0
     #print(int(len(selected_parents)/2) + 1)
     while (i < (int(len(selected_parents)/2) + 1)): # not iterating enough
@@ -244,17 +260,15 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
             #print(children)
             # determine whether offspring are accepted into population
             for c in children:
+                all_children.append(c)
                 parent_offspring_competition(c, selected_parents[i], selected_parents[i+1], population, population_fitnesses, training_data, validation_data)
-            
-            #new_generation.append(retained_individuals) # don't add people twice?
+    
         i += 2
     
-    #print("Index")
-    #print(new_generation[0])
-    # is population being properly modified??
-    #print("\n Check check checking ")
-    #print(population)
+
+    # add back the rest of the population not involved in reproduction
     return population
+
 
         
     
@@ -265,7 +279,8 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
 
 def parent_offspring_competition(child, parent_1, parent_2, population, population_fitnesses, training_data, validation_data):
 
-    print("Competition")
+    print("Replacement strategy")
+    print("Population size {}".format(len(population)))
 
     #fitness_p_1 = fitness_function(parent_1, training_data, validation_data)
     p1_string = str(parent_1).replace(" ", "")
@@ -290,9 +305,10 @@ def parent_offspring_competition(child, parent_1, parent_2, population, populati
     if (fitness_function(child, training_data, validation_data) > worst_fitness):
         #population.replace(worst_parent, child)
         #population = np.where(population == worst_parent, child, population)
-        print("Allonzee")
+        print("Improvement")
         if (worst_parent_string in population_fitnesses.keys()):
             #population = [ individual for individual in population if not (individual==worst_parent).all()]  # better way??
+            print("Worst parent")
             for i in range(len(population)): # is the -1 necessary?
                 #print(i)
                 #print(population[i])
@@ -309,6 +325,7 @@ def parent_offspring_competition(child, parent_1, parent_2, population, populati
                 #print(population[i])
                 #print(worst_parent)
                 #print((population[i]==worst_parent).all())
+                print("Worst individual")
                 if((population[i]==worst_individual).all()):
                     population.pop(i)
                     break
@@ -318,6 +335,7 @@ def parent_offspring_competition(child, parent_1, parent_2, population, populati
         #print(population)
 
     # else do nothing
+    print("Population size {}".format(len(population)))
 
     return population
 
@@ -335,38 +353,35 @@ def parent_offspring_competition(child, parent_1, parent_2, population, populati
 def genetic_algorithm(training_data, validation_data):
 
     
-    n_x = 15 # no. of features - should be 100 but start with 10 # works for 5 i think
+    n_x = 50 # 100
     gen_counter = 0 # generation counter
-    max_gens = 4
+    max_gens = 2
     population_size = 10 # maybe 10*n_x but start small
-    #individual = np.random.randint(0, 2, n_x) # upper bound is excluded
     population = [np.random.randint(0, 2, n_x) for individual in range(population_size)] # initialize nx-dimensional population of given population size ns
-    # discrete - either 0 or 1 only?? - each member of the population should be a bitstring of length n_x
-    #print(population)
+
 
     p_c = 0.8 # high prob of crossover
-    p_m = 0.2 # lower prob of mutation
+    p_m = 0.5 # lower prob of mutation
 
     population_fitnesses = {}
 
     while(gen_counter < max_gens): # choose stopping condition
+
+        print("\n-------Generation {}--------".format(gen_counter))
         
+        # calculate population fitnesses
         population_fitnesses.clear()
         for individual in population:
             fitness = fitness_function(individual, training_data, validation_data)
             print(fitness)
+            # convert to string to use as dictionary key
             individual_string = str(individual)
             individual_string = individual_string.replace(" ", "")
-            #print(individual_string)
             population_fitnesses[individual_string] = fitness # add dictionary entry
 
-        #parents = parent_selection()
-        #offspring = crossover() # where does mutation fit in?
+        # find new population through parent selection, crossover, mutation and a replacement strategy
         population = reproduction(population, population_fitnesses, p_c, p_m, training_data, validation_data) # new generation
-        print("\nNew generation")
-        #print(population)
-        #new_generation = replacement_strategy(parents, offspring)
-        gen_counter += 1
+        gen_counter += 1 # move to next generation
 
     for individual in population:
         fitness = fitness_function(individual, training_data, validation_data)
@@ -397,7 +412,7 @@ def read_text_file_alt(filename):
 
     data.drop(columns =["Features"], inplace = True) # drop old features column
     data["Target"] = features_and_target[1]
-    print(data.head())
+    #print(data.head())
     return data
 
 
