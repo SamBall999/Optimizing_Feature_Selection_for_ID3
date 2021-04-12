@@ -1,10 +1,11 @@
 #----TABU HILL SEARCH----#
 import numpy as np
 import pandas as pd
-from id3 import ID3_Decision_Tree # better way to do this?
+#from id3 import ID3_Decision_Tree 
+from custom_id3 import ID3_Decision_Tree
 from testing import calculate_rates, accuracy
 
-# Are these both wrapper methods???
+
 
 # Feature selection in classication can be modeled as a combinatorial optimization problem.
 # High number of features complicates the learning of the model, and, as a result, makes dicult the correct prediction of new observations.
@@ -18,55 +19,54 @@ from testing import calculate_rates, accuracy
 # our problem is combinatorial and discrete since two classes A and B?? is this true?
 
 
-
-# Design decisions
-# 1. How to encode problem/solution
-# 2. How to define neighbourhood
-# 3. What to use as fitness function??
-
-
-
-# ENCODING PROBLEM
-# Each solution is encoded as a bitstring of length no_features
-# Each bit in the bit string indicates whether that features is chosen or not
-
 # calculates fitness of current position
 # we want to find the set of features which allows ID3 to obtain the best generalization ability.
 # therefore do we use accuracy on the validation set?? (recall test set must in no way be used to create the model)
 # i.e. given a candidate subset x -> build model using training set and evaluate accuracy on validation set and use this as fitness??
 # NB rather make training and validation data global??
 def objective_function(candidate_x, training_data, validation_data): 
+    """
+    Calculates the validation accuracy of the ID3 classifier for a given feature subset.
 
-    tree = ID3_Decision_Tree() # intialize decision tree
+    Arguments:
+    - Candidate solution in the form of bitvector representing a feature subset
+    - Set of training data used to build ID3 decision tree
+    - Set of validation data used to measure accuracy on unseen data
 
-    # TO DO: need to process the bitstring candidate x into the indices of which features to include
-    # convert from string to array if it is not in array form?
-    #print("\nCandidate x: {}".format(candidate_x))
+    Returns:
+    - Validation accuracy representing a measure of generalisation ability.
+    """
 
+    # get selected features from the bitvector encoding
+    feature_indices = [(i+1) for i in range(len(candidate_x)) if candidate_x[i]==1]
+    feature_list =  training_data.columns.values[feature_indices] 
+  
+    # convert x and y data to numpy arrays
+    x = np.array(training_data.drop("Target", axis=1).copy())
+    y = np.array(training_data["Target"])
 
-    # find positions of 1's in the bitstring
-    # what happens to the brackets?? ignored because of ==1??
-    feature_indices = [(i+1) for i in range(len(candidate_x)) if candidate_x[i]==1]# be careful whether it is the index or the name of the feature
-    feature_indices.append(-1) # append -1 in order to get Target column
-    # +1 added to account for features starting at 1 not 0 
+    # create decision tree with given subset
+    tree = ID3_Decision_Tree(x, y) # intialize decision tree
+    tree.id_3(feature_list) # build tree
 
-    #print(training_data.iloc[: , feature_indices]) # need to also add target column!!
-
-    tree.id_3(training_data.iloc[:, feature_indices]) # how to input the correct feature subset??
    
-    # can calculate the training accuracy to check things
-    #predictions = tree.predict_batch(training_data)
+    # verify if training accuracy is 100% (overfitting is occurring)
+    #predictions = tree.predict_batch(x)
     #targets = training_data["Target"].values
     #TP, FP, TN, FN = calculate_rates(targets, predictions)
     #training_accuracy = accuracy(TP, FP, TN, FN)
     #print("Training Accuracy: {}".format(training_accuracy))
 
-    validation_predictions = tree.predict_batch(validation_data)
+    # calculate accuracy on the validation set
+    #validation_predictions = tree.predict_batch(validation_data)
+    X_val = np.array(validation_data.drop("Target", axis=1).copy())
+    validation_predictions = tree.predict_batch(X_val)
     validation_targets = validation_data["Target"].values
-    TP, FP, TN, FN = calculate_rates(validation_targets, validation_predictions)
-    validation_accuracy = accuracy(TP, FP, TN, FN)
-    #print("Validation Accuracy: {}".format(validation_accuracy))
+    TP, FP, TN, FN = calculate_rates(validation_targets, validation_predictions) # calculate number of true positives, false positives etc.
+    validation_accuracy = accuracy(TP, FP, TN, FN) # calculate validation accuracy
+    print("Validation Accuracy: {}".format(validation_accuracy))
 
+    # fitness is measured by validation accuracy
     fitness = validation_accuracy
 
     return fitness
@@ -74,20 +74,44 @@ def objective_function(candidate_x, training_data, validation_data):
 
 # can we increase efficiency e.g. list comprehension??
 def get_fitnesses(neighbourhood, training_data, validation_data, tabu_list):
+    """
+    Calculates the value of the objective function for all solutions in the neighbourhood.
+
+    Arguments:
+    - Set of neighbourhood solutions in the form of bitvectors
+    - Set of training data used to build ID3 decision tree
+    - Set of validation data used to measure accuracy on unseen data
+    - List of tabu elements to verify if a solution should be considered
+
+    Returns:
+    - A dictionary mapping each solution in the nieghbourhood to their objective function value.
+    """
+
     fitnesses = {}
+    print("No. of neighbours: {}".format(len(neighbourhood)))
     for neighbour in neighbourhood:
         neighbour_string = str(neighbour)
         neighbour_string = neighbour_string.replace(" ", "")
         if ((neighbour_string not in tabu_list) and (np.sum(neighbour) != 0)): # only evaluate neighbours that are not on the tabu list and that have at least one feature
             fitness = objective_function(neighbour, training_data, validation_data)
             fitnesses[neighbour_string] = fitness # add dictionary entry
-    print("No. of neighbours: {}".format(len(fitnesses)))
+    #print("No. of neighbours: {}".format(len(fitnesses)))
     return fitnesses
 
 
 
 
 def one_flip(x, index):
+    """
+    Creates a new candidate solution by flipping the bit at the given index.
+
+    Arguments:
+    - Candidate solution in the form of bitvector representing a feature subset
+    - Index of the bit to be flipped
+
+    Returns:
+    - A new bitvector with the same values as the current solution except for one flipped bit at given index
+    """
 
     #print(x)
     x_new = np.empty_like (x)
@@ -101,83 +125,60 @@ def one_flip(x, index):
 
 
 # define all possible moves from current location
-# how do you know what you can move to???
 # possible the one flip neighbourhood? justify/explore other possibilities?
 # possibly the k flip neighbourhood? -> all bitstrings that have k=2 bit flips (NB this is an extra hyperparameter)
-# NB why is current_x changing?????
 def find_neighbourhood(current_x):
+    """
+    Creates a new candidate solution by flipping the bit at the given index.
+
+    Arguments:
+    - Candidate solution in the form of bitvector representing a feature subset
+    - Index of the bit to be flipped
+
+    Returns:
+    - A new bitvector with the same values as the current solution except for one flipped bit at given index
+    """
 
     #neighbourhood = [one_flip(current_x, i) for i in range(len(current_x))]
     
     #print("Neighbourhood")
+    #subset_size = 20 # another hyperparameter!!
     neighbourhood = []
     for i in range(len(current_x)):
         x_copy = current_x
         #print(i)
         neighbourhood.append(one_flip(x_copy, i))
 
+    #random_subset = np.random.randint(0, len(neighbourhood)-1, n_x) 
     return neighbourhood
 
-
-
-# check if local optimum reached
-# local optimum reached when fitness of current x is strictly better than all of its neighbours
-def is_local_optimum(current_x, fitnesses):
-    is_local_optimum = 1
-    current_fitness = objective_function(current_x)
-    for neighbour in fitnesses.keys:
-        if (fitnesses[neighbour] > current_fitness):
-            is_local_optimum = 0
-            break
-
-    return is_local_optimum
-
-
-# mark certain candidate solutions as forbidden - do we really need a method for this?
-# make tabu list a class variable?
-# CHOICE: Frequency based memory or Recency based - try both and decide? -motivate
-def mark_tabu(tabu_list, element):
-    # frequency
-    if(frequency(element) > 2):
-        tabu_list =  tabu_list.append(element)
-
-    # recency - sliding window of recently visited entities
-    tabu_list =  tabu_list.append(element) # just call this method on the most recent elements?
-    return tabu_list
     
 
 
-# possibly implement just hill search first and then add tabu part
+
 # note consider that function evaluations are usually your computational currency - don't repeat them
-# note this is a 'best improvement (greedy)' hill climber - should we use first improvement to save function evals??
-# thoughts on adding aspiration criteria??
 # The procedure will select the best local candidate (although it has worse fitness than the sBest) in order to escape the local optimal.
 # his process continues until the user specified stopping criterion is met, at which point, the best solution seen during the search process is returned
 # keep a separate ultimate best but still allow to escape local optima
 def tabu_search(training_data, validation_data):
     
-    #local_optimum = 0 # set local optimum to be false to begin within
-    #n_x = 10 # number of features = 100 (for now we use 10)
-    n_x = 8
+
+    n_x = 30 #100
 
     # define starting point - bitstring of 0's and 1's of length n_x
     x_current = np.random.randint(0, 2, n_x) # choose randomnly from a distribution (all poss starting points)
     print("Starting position: {} \n".format(x_current))
     x_best = x_current # absolute best
 
-    #neighbours = find_neighbourhood(x_current)
-    #fitnesses = get_fitnesses(neighbours, training_data, validation_data) # initial neighbouring fitnesses
+    t = 0  # initialize number of iterations 
+    t_max = 3 # max iterations
 
-    t, t_max = 0, 1 # initialize number of iterations and max iterations
-    #t_max = 6 # max iterations
-
-    tabu_list = []
-    tabu_list.append(str(x_current).replace(" ", ""))
+    tabu_list = [] # initialize tabu list
+    tabu_list.append(str(x_current).replace(" ", "")) # add curent solution to tabu list
     print(tabu_list)
-    max_tabu_size = 4
+    max_tabu_size = 4 # hyperparameter
 
-    #while (is_local_optimum(x_current, fitnesses) == 0): # while a local optimum has not been reached - is this the correct stopping condition?
-    while (t < t_max):
+    while (t < t_max): # while max number of iterations has not been reached
 
         print("\n-------Iteration {}--------".format(t))
         
