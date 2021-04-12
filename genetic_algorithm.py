@@ -10,10 +10,21 @@ from testing import calculate_rates, accuracy
 # potential downside of GA compared to tabu -> more function evals
 
 
-
-# calculates fitness of current position = ability of individual to survive
 # Objectives: maximize classification accuracy of the feature subset. 
 def fitness_function(individual, training_data, validation_data):
+
+    """
+    Calculates the fitness of the given individual based on the validation accuracy of the ID3 classifier for a given feature subset.
+
+    Arguments:
+    - Individual chromosome in the form of bitvector representing a feature subset
+    - Set of training data used to build ID3 decision tree
+    - Set of validation data used to measure accuracy on unseen data
+
+    Returns:
+    - Validation accuracy representing a measure of generalisation ability.
+    """
+
  
     # check that feature subset contains at least one feature
     if (np.sum(individual) == 0): # if no features
@@ -56,12 +67,20 @@ def fitness_function(individual, training_data, validation_data):
 
 
 
-# single point 
+
 def single_point_crossover_mask(n_x):
 
-    crossover_point = np.random.randint(1, n_x, 1)
+    """
+    Calculates mask used in bitstring crossover based on a single cut point.
 
-    #print(crossover_point)
+    Arguments:
+    - Length of each chromosome based on number of dimensions in the candidate solutions
+
+    Returns:
+    - Mask indicating which bit positions will take on the value from each parent
+    """
+
+    crossover_point = np.random.randint(1, n_x-1, 1) # choose random cut point, excluding the ends of the chromosome
 
     mask = np.zeros(n_x, dtype=int)
     j = crossover_point
@@ -78,13 +97,21 @@ def single_point_crossover_mask(n_x):
 # also try single point or uniform crossover
 def two_point_crossover_mask(n_x):
 
+    """
+    Calculates mask used in bitstring crossover based on a two cut points.
+
+    Arguments:
+    - Length of each chromosome based on number of dimensions in the candidate solutions
+
+    Returns:
+    - Mask indicating which bit positions will take on the value from each parent
+    """
+
     possible_points = np.arange(1, n_x)
-    crossover_points = np.random.choice(possible_points,  2, replace = False) #np.random.randint(1, n_x, 2)# select crossover points, no replacement
+    crossover_points = np.random.choice(possible_points,  2, replace = False) # select crossover points, no replacement
     e_1 = min(crossover_points)
     e_2 = max(crossover_points)
     print(crossover_points)
-    print(e_1)
-    print(e_2)
     mask = np.zeros(n_x, dtype=int)
     j = e_1 + 1
     while (j < e_2):
@@ -95,14 +122,24 @@ def two_point_crossover_mask(n_x):
 
 
 
-# produce new offspring 
-# also try single point crossover
 def bitstring_crossover(parent_1, parent_2, n_x):
+
+    """
+    Produces two offspring from two selected parents through bitstring crossover.
+
+    Arguments:
+    - First selected parent chromosome
+    - Second selected parent chromosome
+    - Length of each chromosome (dimension of the possible solutions)
+
+    Returns:
+    - Two offspring created through bitstring crossover
+    """
 
     print("Crossover")
 
-    # init children
-    child_1 = parent_1.copy() # copies are not independent?
+    # initialize children
+    child_1 = parent_1.copy() # independent copy
     child_2 = parent_2.copy()
 
     # get crossover mask
@@ -110,7 +147,7 @@ def bitstring_crossover(parent_1, parent_2, n_x):
     mask = single_point_crossover_mask(n_x)
 
     # apply mask
-    for j in range(0, n_x): # do we start at 1 or 0?
+    for j in range(0, n_x): 
         if (mask[j] == 1):
             child_1[j] = parent_2[j]
             child_2[j] = parent_1[j]
@@ -118,12 +155,24 @@ def bitstring_crossover(parent_1, parent_2, n_x):
     return [child_1, child_2]
 
 
-# introduce new genetic material
-# random mutation -> apply p_m to each bit
+
+
 def mutate(chromosome, p_m):
+
+    """
+    Introduces new genetic material through random mutation.
+
+    Arguments:
+    - Child chromosome to be mutated
+    - Probability of mutation being applied to each bit
+
+    Returns:
+    - Chromosome after mutation applied to each bit according to mutation probability p_m
+    """
 
     print("Mutation")
 
+     # apply mutation to each bit according to mutation probability p_m
     for i in range(len(chromosome)):
         r = np.random.uniform(0, 1)
         if (r < p_m):
@@ -134,13 +183,25 @@ def mutate(chromosome, p_m):
 
 
 def proportional_probability(individual, fitness_sum, population_fitnesses):
-    # NB scaled fitnesses??
-    fitness = 0 # if [0 0 0 0 ] # not allowed therefore probability to be selected must be zero
-    if (np.sum(individual) != 0):
-        #fitness = fitness_function(individual, training_data, validation_data) # scaled?
+
+    """
+    Calculates the probability that an individual will be selected based on fitness proportional to other fitnesses in population.
+
+    Arguments:
+    - Individual for which the probability of being selected is calculated
+    - Sum of all fitnesses in the population
+    - Dictionary containing fitnesses of each individual in the population
+
+    Returns:
+    - Probability that the given individual will be selected
+    """
+
+    fitness = 0 # individuals with no features are not allowed therefore probability to be selected must be zero
+    if (np.sum(individual) != 0):  # check that feature subset contains at least one feature
         individual_string = str(individual).replace(" ", "")
-        fitness = population_fitnesses[individual_string]
-    #all_fitnesses = [fitness_function(population[i], training_data, validation_data) for i in range(len(population))]
+        individual_string = individual_string.replace("\n", "")
+        fitness = population_fitnesses[individual_string] # calculate fitness of the individual
+  
     prob = fitness/fitness_sum # probability that individual x_i will be selected
     #print(prob)
     return prob
@@ -150,31 +211,47 @@ def proportional_probability(individual, fitness_sum, population_fitnesses):
 # Roulette wheel selection -> can also try more balanced variant: stochastic universal sampling
 def roulette_wheel_selection(population, fitness_sum, population_fitnesses):
 
-    print("Roulette selection")
+    """
+    Selects a parent chromosome based on roulette wheel selection.
 
+    Arguments:
+    - Population of possible solutions
+    - Sum of all fitnesses in the population
+    - Dictionary containing fitnesses of each individual in the population
+
+    Returns:
+    - Selected parent from population
+    """
+
+    print("Roulette selection")
 
     i = 0 # first chromosome
     p_i = proportional_probability(population[i], fitness_sum, population_fitnesses) # probability of first chromosome
-    #probs = [proportional_probability(i, fitness_sum, population_fitnesses) for i in population]
-    #print(probs)
-    #print(np.sum(probs))
     summation = p_i # points to the top of the first region
-    r = np.random.uniform(0, 1) # generate random number sampled uniformly between 0 and 1 - do we need to include 1 somehow??
+    r = np.random.uniform(0, 1) # generate random number sampled uniformly between 0 and 1 
     #print("R {}:".format(r)) # sometimes we dont reach r before i is out of range?
     while (summation < r):
         i = i+1
-        #print(i)
         summation = summation + proportional_probability(population[i], fitness_sum, population_fitnesses)
         #print("Sum {}:".format(summation))
 
-    #print(population[i])
-    #print(proportional_probability(population[i], all_fitnesses, training_data, validation_data))
     return population[i] # selected individual/parent
 
 
 # choose fitter individuals for reproduction -> should also try rank-based at some point
 # (i) Roulette wheel selection - with or without replacement??
 def parent_selection(population, population_fitnesses):
+
+    """
+    Selects a set of parents from the population.
+
+    Arguments:
+    - Population of possible solutions
+    - Dictionary containing fitnesses of each individual in the population
+
+    Returns:
+    - Selected parents 
+    """
 
     print("Parent selection")
     # how many parents to select?? - for now we select 2 parents -> 2 children
@@ -184,20 +261,29 @@ def parent_selection(population, population_fitnesses):
         num_parents = num_parents+1
     p = [] # list of parents
 
-    # compute sum of all fitnesses in population once
-    #all_fitnesses = [fitness_function(population[i], training_data, validation_data) for i in range(len(population))]
-    #fitness_sum = np.sum(all_fitnesses) # sum of fitnesses across all individuals
+    # compute sum of all fitnesses in population 
     fitness_sum = sum(population_fitnesses.values())
-    #print(fitness_sum)
 
+    # select parents based on roulette wheel selection
     for i in range(num_parents):
         p.append(roulette_wheel_selection(population, fitness_sum, population_fitnesses))
 
     return p # selected parents
 
 
-# try to have fewest fucntion evals possible
+
 def select_new_gen(parents, children, population, population_fitnesses, training_data, validation_data):
+
+    """
+    Selects a set of parents from the population.
+
+    Arguments:
+    - Population of possible solutions
+    - Dictionary containing fitnesses of each individual in the population
+
+    Returns:
+    - Selected parents 
+    """
 
     new_generation = []
     no_children =  len(children)
@@ -232,52 +318,66 @@ def select_new_gen(parents, children, population, population_fitnesses, training
 
 
 
+ # could use Boltzmann selection to decide if offspring replaces parent
 def reproduction(population, population_fitnesses, p_c, p_m, training_data, validation_data):
-    
+
+    """
+    Performs reproduction by selecing parents, performing crossover and mutation and selecting new generation.
+
+    Arguments:
+    - Population of possible solutions
+    - Dictionary containing fitnesses of each individual in the population
+    - Probability of crossover occurring
+    - Probability of mutation occurring
+
+    Returns:
+    - New generation 
+    """
+
     # select parents using selection operator
     selected_parents = parent_selection(population, population_fitnesses)
     print("No. of parents {}".format(len(selected_parents)))
 
 
     n_x = len(population[0]) # number of features
-    #print("No. of features {}".format(n_x))
-
-    all_children = []
 
     # perform crossover using selected parents
-    #new_generation = []
     i = 0
-    #print(int(len(selected_parents)/2) + 1)
     while (i < (int(len(selected_parents)/2) + 1)): # not iterating enough
         r = np.random.uniform(0, 1) 
         #print(r)
-        if (r < p_c): # is this correct way to implement crossover probability
-            #print("selected parents {} and {}".format(selected_parents[i], selected_parents[i+1]))
+        if (r < p_c): # crossover probability
             children = bitstring_crossover(selected_parents[i], selected_parents[i+1], n_x) # NB should ensure this is not the same individual
-             # apply mutation
-            #print(children)
+            # apply mutation
             children = [mutate(c, p_m) for c in children]
-            #print(children)
             # determine whether offspring are accepted into population
             for c in children:
-                all_children.append(c)
                 parent_offspring_competition(c, selected_parents[i], selected_parents[i+1], population, population_fitnesses, training_data, validation_data)
     
         i += 2
-    
 
-    # add back the rest of the population not involved in reproduction
     return population
-
-
-        
-    
-    # could use Boltzmann selection to decide if offspring replaces parent
 
 
 
 
 def parent_offspring_competition(child, parent_1, parent_2, population, population_fitnesses, training_data, validation_data):
+
+    """
+    Decides whether the offspring will be included as part of the new generation based on its fitness relative to parents.
+
+    Arguments:
+    - Offspring chromosome
+    - First parent chromosome
+    - Second parent chromosome
+    - Population of possible solutions
+    - Dictionary containing fitnesses of each individual in the population
+    - Set of training data used to build ID3 decision tree
+    - Set of validation data used to measure accuracy on unseen data
+
+    Returns:
+    - Modified population 
+    """
 
     print("Replacement strategy")
     print("Population size {}".format(len(population)))
@@ -352,6 +452,17 @@ def parent_offspring_competition(child, parent_1, parent_2, population, populati
 
 def genetic_algorithm(training_data, validation_data):
 
+    """
+    Performs a search using a genetic algorithm in order to find the feature subset that maximizes validation accuracy.
+
+    Arguments:
+    - Set of training data used to build ID3 decision tree
+    - Set of validation data used to measure accuracy on unseen data
+
+    Returns:
+    - Feature subset with highest validation accuracy in the current population
+    """
+
     
     n_x = 50 # 100
     gen_counter = 0 # generation counter
@@ -400,23 +511,43 @@ def genetic_algorithm(training_data, validation_data):
 
 
 def read_text_file_alt(filename):
+
+    """
+    Reads in the dataset from a text file and stores in a dataframe.
+
+    Arguments:
+    - Filename of text file containing dataset
+
+    Returns:
+    - Dataframe containing features and target values split into columns.
+    """
     
-    data = pd.read_csv(filename, header = None) 
-    # first separate features and targets
-    features_and_target = data[0].str.split(pat=" ", expand=True)
+    data = pd.read_csv(filename, header = None) # read data into a dataframe
+    features_and_target = data[0].str.split(pat=" ", expand=True)  # first separate features and targets
     data["Features"] = features_and_target[0]
+
     # split features into their own columns
     split_features = data["Features"].str.split(pat="", expand=True)
     for i in range(split_features.shape[1]-1):
-        data[i] = split_features[i] # does this index the column??
+        data[i] = split_features[i] 
 
     data.drop(columns =["Features"], inplace = True) # drop old features column
-    data["Target"] = features_and_target[1]
+    data["Target"] = features_and_target[1] # create target column
     #print(data.head())
     return data
 
 
+
 def main():
+
+    """
+    Runs the genetic algorithm for the given training and validation dataset.
+
+    Arguments:
+
+
+    """
+
     print("\nFeature Optimization for ID3")
     print("--------Genetic Algorithm---------")
 
