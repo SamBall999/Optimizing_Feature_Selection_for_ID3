@@ -143,8 +143,8 @@ def bitstring_crossover(parent_1, parent_2, n_x):
     child_2 = parent_2.copy()
 
     # get crossover mask
-    #mask = two_point_crossover_mask(n_x)
-    mask = single_point_crossover_mask(n_x)
+    mask = two_point_crossover_mask(n_x)
+    #mask = single_point_crossover_mask(n_x)
 
     # apply mask
     for j in range(0, n_x): 
@@ -238,6 +238,25 @@ def roulette_wheel_selection(population, fitness_sum, population_fitnesses):
     return population[i] # selected individual/parent
 
 
+
+def tournament_selection(population, population_fitnesses):
+
+
+    n_t = int(len(population)/5)
+    tournament_indices = list(np.random.randint(0, len(population)-1, n_t))
+    tournament = [population[t] for t in tournament_indices]
+    # can we calc less fitnesses this way?
+    tournament_fitnesses = [population_fitnesses[str(t).replace(" ", "").replace("\n", "")] for t in tournament]
+    max_fitness = max(tournament_fitnesses)
+    max_index = tournament_fitnesses.index(max_fitness) 
+    chosen_individual = tournament[max_index]
+    print(chosen_individual)
+    print(max_fitness)
+
+    return chosen_individual
+
+
+
 # choose fitter individuals for reproduction -> should also try rank-based at some point
 # (i) Roulette wheel selection - with or without replacement??
 def parent_selection(population, population_fitnesses):
@@ -266,7 +285,8 @@ def parent_selection(population, population_fitnesses):
 
     # select parents based on roulette wheel selection
     for i in range(num_parents):
-        p.append(roulette_wheel_selection(population, fitness_sum, population_fitnesses))
+        #p.append(roulette_wheel_selection(population, fitness_sum, population_fitnesses))
+        p.append(tournament_selection(population, population_fitnesses))
 
     return p # selected parents
 
@@ -343,6 +363,7 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
 
     # perform crossover using selected parents
     i = 0
+    removed_individuals = []
     while (i < (int(len(selected_parents)/2) + 1)): # not iterating enough
         r = np.random.uniform(0, 1) 
         #print(r)
@@ -352,7 +373,7 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
             children = [mutate(c, p_m) for c in children]
             # determine whether offspring are accepted into population
             for c in children:
-                parent_offspring_competition(c, selected_parents[i], selected_parents[i+1], population, population_fitnesses, training_data, validation_data)
+                removed_individuals = parent_offspring_competition(c, selected_parents[i], selected_parents[i+1], removed_individuals, population, population_fitnesses, training_data, validation_data)
     
         i += 2
 
@@ -361,7 +382,94 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
 
 
 
-def parent_offspring_competition(child, parent_1, parent_2, population, population_fitnesses, training_data, validation_data):
+"""def parent_offspring_competition(child, parent_1, parent_2, removed_individuals, population, population_fitnesses, training_data, validation_data):
+
+
+    Decides whether the offspring will be included as part of the new generation based on its fitness relative to parents.
+
+    Arguments:
+    - Offspring chromosome
+    - First parent chromosome
+    - Second parent chromosome
+    - Population of possible solutions
+    - Dictionary containing fitnesses of each individual in the population
+    - Set of training data used to build ID3 decision tree
+    - Set of validation data used to measure accuracy on unseen data
+
+    Returns:
+    - Modified population 
+
+
+    print("Replacement strategy")
+    print("Population size {}".format(len(population)))
+
+    #fitness_p_1 = fitness_function(parent_1, training_data, validation_data)
+    p1_string = str(parent_1).replace(" ", "")
+    p1_string = p1_string.replace("\n", "")
+    fitness_p_1= population_fitnesses[p1_string]
+    #print(fitness_p_1)
+    p2_string = str(parent_2).replace(" ", "")
+    p2_string = p2_string.replace("\n", "")
+    fitness_p_2= population_fitnesses[p2_string]
+    #print(fitness_p_2)
+    #fitness_p_2 = fitness_function(parent_2, training_data, validation_data)
+    worst_parent = parent_1
+    worst_parent_string = str(worst_parent).replace(" ", "")
+    worst_parent_string = worst_parent_string.replace("\n", "")
+    worst_fitness = fitness_p_1
+
+    if(fitness_p_1 > fitness_p_2):
+        worst_parent = parent_2
+        worst_fitness = fitness_p_2
+ 
+
+    # if child better than worst parent, remove worst parent and add child
+    child_fitness = fitness_function(child, training_data, validation_data)
+    #print(child_fitness)
+    if (fitness_function(child, training_data, validation_data) > worst_fitness):
+        #population.replace(worst_parent, child)
+        #population = np.where(population == worst_parent, child, population)
+        print("Improvement")
+        
+        if (worst_parent_string not in removed_individuals):
+            for i in range(len(population)): 
+                # if the worst parent hasn't already been removed - remove it and break the loop
+                if((population[i]==worst_parent).all()):
+                    population.pop(i)
+                    print("worst parent found and removed")
+                    removed_individuals.append(worst_parent_string)
+                    break
+
+        else:    
+            worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
+            print(worst_individual_string)
+            i = 0
+            while(worst_individual_string in removed_individuals):
+                worst_individual_string = sorted(population_fitnesses,  key=population_fitnesses.get, reverse=False)[i]
+                print(worst_individual_string)
+                i += 1
+                #worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
+            worst_individual = np.array(list(worst_individual_string[1:-1]),  dtype=int)
+            for i in range(len(population)): 
+                if((population[i]==worst_individual).all()):
+                    print("Worst individual removed")
+                    population.pop(i)
+                    removed_individuals.append(worst_individual_string)
+                    break
+        
+        population.append(child)
+
+
+    # else do nothing
+    print("Population size {}".format(len(population)))
+
+    #return population
+    print(removed_individuals)
+    return removed_individuals"""
+
+
+
+def parent_offspring_competition(child, parent_1, parent_2, removed_individuals, population, population_fitnesses, training_data, validation_data):
 
     """
     Decides whether the offspring will be included as part of the new generation based on its fitness relative to parents.
@@ -380,64 +488,43 @@ def parent_offspring_competition(child, parent_1, parent_2, population, populati
     """
 
     print("Replacement strategy")
-    print("Population size {}".format(len(population)))
+    #print("Population size {}".format(len(population)))
 
-    #fitness_p_1 = fitness_function(parent_1, training_data, validation_data)
-    p1_string = str(parent_1).replace(" ", "")
-    fitness_p_1= population_fitnesses[p1_string]
-    #print(fitness_p_1)
-    p2_string = str(parent_2).replace(" ", "")
-    fitness_p_2= population_fitnesses[p2_string]
-    #print(fitness_p_2)
-    #fitness_p_2 = fitness_function(parent_2, training_data, validation_data)
-    worst_parent = parent_1
-    worst_parent_string = str(worst_parent).replace(" ", "")
-    worst_fitness = fitness_p_1
-
-    if(fitness_p_1 > fitness_p_2):
-        worst_parent = parent_2
-        worst_fitness = fitness_p_2
+    worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
+    #print(worst_individual_string)
+    i = 0
+    while(worst_individual_string in removed_individuals):
+        worst_individual_string = sorted(population_fitnesses,  key=population_fitnesses.get, reverse=False)[i]
+        #print(worst_individual_string)
+        i += 1
  
-
-    # if child better than worst parent, remove worst parent and add child
+    worst_fitness = population_fitnesses[worst_individual_string]
     child_fitness = fitness_function(child, training_data, validation_data)
-    #print(child_fitness)
+
+    # if child better than worst individual, remove worst individual
     if (fitness_function(child, training_data, validation_data) > worst_fitness):
         #population.replace(worst_parent, child)
         #population = np.where(population == worst_parent, child, population)
         print("Improvement")
-        if (worst_parent_string in population_fitnesses.keys()):
-            #population = [ individual for individual in population if not (individual==worst_parent).all()]  # better way??
-            print("Worst parent")
-            for i in range(len(population)): # is the -1 necessary?
-                #print(i)
-                #print(population[i])
-                #print(worst_parent)
-                #print((population[i]==worst_parent).all())
-                if((population[i]==worst_parent).all()):
-                    population.pop(i)
-                    break
-        else:
-            worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
-            worst_individual = np.array(list(worst_individual_string[1:-1]))
-            for i in range(len(population)): # is the -1 necessary?
-                #print(i)
-                #print(population[i])
-                #print(worst_parent)
-                #print((population[i]==worst_parent).all())
-                print("Worst individual")
-                if((population[i]==worst_individual).all()):
-                    population.pop(i)
-                    break
-
+       
+        #worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
+        worst_individual = np.array(list(worst_individual_string[1:-1]),  dtype=int)
+        for i in range(len(population)): 
+            if((population[i]==worst_individual).all()):
+                print("Worst individual removed")
+                population.pop(i)
+                removed_individuals.append(worst_individual_string)
+                break
+        
         population.append(child)
-        #print("\n")
-        #print(population)
+
 
     # else do nothing
-    print("Population size {}".format(len(population)))
+    #print("Population size {}".format(len(population)))
 
-    return population
+    #return population
+    #print(removed_individuals)
+    return removed_individuals
 
 
 
@@ -464,15 +551,15 @@ def genetic_algorithm(training_data, validation_data):
     """
 
     
-    n_x = 50 # 100
+    n_x = 10 # 100
     gen_counter = 0 # generation counter
     max_gens = 2
     population_size = 10 # maybe 10*n_x but start small
     population = [np.random.randint(0, 2, n_x) for individual in range(population_size)] # initialize nx-dimensional population of given population size ns
 
 
-    p_c = 0.8 # high prob of crossover
-    p_m = 0.5 # lower prob of mutation
+    p_c = 0.9 # high prob of crossover
+    p_m = 0.1 # lower prob of mutation
 
     population_fitnesses = {}
 
@@ -486,8 +573,8 @@ def genetic_algorithm(training_data, validation_data):
             fitness = fitness_function(individual, training_data, validation_data)
             print(fitness)
             # convert to string to use as dictionary key
-            individual_string = str(individual)
-            individual_string = individual_string.replace(" ", "")
+            individual_string = str(individual).replace(" ", "")
+            individual_string = individual_string.replace("\n", "")
             population_fitnesses[individual_string] = fitness # add dictionary entry
 
         # find new population through parent selection, crossover, mutation and a replacement strategy
@@ -497,15 +584,15 @@ def genetic_algorithm(training_data, validation_data):
     for individual in population:
         fitness = fitness_function(individual, training_data, validation_data)
         print(fitness)
-        individual_string = str(individual)
-        individual_string = individual_string.replace(" ", "")
-        #print(individual_string)
+        individual_string = str(individual).replace(" ", "")
+        individual_string = individual_string.replace("\n", "")
         population_fitnesses[individual_string] = fitness # add dictionary entry
     
     # what do we have at the end? the best individual in the population?
     best_individual = max(population_fitnesses, key=population_fitnesses.get)
     print(best_individual)
     print(population_fitnesses[best_individual])
+    return best_individual 
 
 
 
@@ -560,7 +647,18 @@ def main():
 
 
 
-    genetic_algorithm(training_data, validation_data)
+    best_solution_string = genetic_algorithm(training_data, validation_data)
+    print(best_solution_string)
+    best_solution = np.array(list(best_solution_string[1:-1]), dtype=int)
+    best_fitness = fitness_function(best_solution, training_data, validation_data)
+    print("Best Validation Fitness: {}".format(best_fitness))
+
+
+    print("Reading in Test Data") 
+    test_data = read_text_file_alt("./Data/Test_Data.txt")
+
+    test_fitness = fitness_function(best_solution, training_data, test_data) # check that this is correct
+    print("Test Fitness: {}".format(test_fitness))
 
 
 
