@@ -10,6 +10,7 @@ from testing import calculate_rates, accuracy
 
 
 def objective_function(candidate_x, training_data, validation_data): 
+
     """
     Calculates the fitness of the current position based on the validation accuracy of the ID3 classifier for a given feature subset.
 
@@ -58,6 +59,7 @@ def objective_function(candidate_x, training_data, validation_data):
 
 
 def get_fitnesses(neighbourhood, training_data, validation_data, tabu_list):
+
     """
     Calculates the value of the objective function for all solutions in the neighbourhood.
 
@@ -72,7 +74,7 @@ def get_fitnesses(neighbourhood, training_data, validation_data, tabu_list):
     """
 
     fitnesses = {}
-    print("No. of neighbours: {}".format(len(neighbourhood)))
+    #print("No. of neighbours: {}".format(len(neighbourhood)))
     for neighbour in neighbourhood:
         neighbour_string = str(neighbour).replace(" ", "") # remove spaces
         neighbour_string = neighbour_string.replace("\n", "") # remove newline if string is very long
@@ -85,7 +87,10 @@ def get_fitnesses(neighbourhood, training_data, validation_data, tabu_list):
 
 
 
+
+
 def one_flip(x, index):
+
     """
     Creates a new candidate solution by flipping the bit at the given index.
 
@@ -107,9 +112,34 @@ def one_flip(x, index):
 
 
 
+def k_flip(x, indices):
+
+    """
+    Creates a new candidate solution by flipping the bits at the given indices.
+
+    Arguments:
+    - Candidate solution in the form of bitvector representing a feature subset
+    - Indices of the bits to be flipped
+
+    Returns:
+    - A new bitvector with the same values as the current solution except for k flipped bits at given indices
+    """
+
+    #print(x)
+    x_new = np.empty_like (x)
+    x_new[:] = x # new object
+    for index in indices:
+        x_new[index] = not x_new[index] # flip bit at desired index
+    #print(x_new)
+
+    return x_new
+
+
+
 
 # possibly the k flip neighbourhood? -> all bitstrings that have k=2 bit flips (NB this is an extra hyperparameter)
 def find_neighbourhood(current_x):
+
     """
     Generates a set of neighbourhood solutions based on the one flip neighbourhood.
 
@@ -124,10 +154,18 @@ def find_neighbourhood(current_x):
     neighbourhood = []
     for i in range(len(current_x)):
         x_copy = current_x
-        neighbourhood.append(one_flip(x_copy, i))
+        #neighbourhood.append(one_flip(x_copy, i))
+        interval = int(len(current_x)/3)
+        print(interval)
+        indices = [i, i+interval, i+(2*interval)]
+        for j in range(len(indices)):
+          if (indices[j] > len(current_x)-1):
+            indices[j] = indices[j] - len(current_x)
+
+        neighbourhood.append(k_flip(x_copy, indices))
     
     random_subset = list(np.random.randint(0, len(neighbourhood)-1, subset_size)) 
-    print(random_subset)
+    #print(random_subset)
     neighbourhood_subset = [neighbourhood[i] for i in random_subset]
 
     #return neighbourhood
@@ -140,8 +178,9 @@ def find_neighbourhood(current_x):
 # The procedure will select the best local candidate (although it has worse fitness than the sBest) in order to escape the local optimal.
 # keep a separate ultimate best but still allow to escape local optima
 def tabu_search(training_data, validation_data):
+
     """
-    Performs tabu search in order to find the feature subset that maximized validation accuracy.
+    Performs tabu search in order to find the feature subset that maximizes validation accuracy.
 
     Arguments:
     - Set of training data used to build ID3 decision tree
@@ -165,7 +204,7 @@ def tabu_search(training_data, validation_data):
     tabu_list = [] # initialize tabu list
     x_current_string = str(x_current).replace(" ", "")
     tabu_list.append(x_current_string.replace("\n", ""))  # add curent solution to tabu list
-    print(tabu_list)
+    #print(tabu_list)
     max_tabu_size = 4 # set maximum tabu list size (hyperparameter)
 
     # while max number of iterations has not been reached
@@ -210,6 +249,7 @@ def tabu_search(training_data, validation_data):
 
 
 def read_text_file_alt(filename):
+
     """
     Reads in the dataset from a text file and stores in a dataframe.
 
@@ -237,6 +277,7 @@ def read_text_file_alt(filename):
 
 
 def main():
+
     """
     Runs the tabu search algorithm for the given training and validation dataset.
 
@@ -257,7 +298,19 @@ def main():
 
 
     # run tabu search on the given datasets
-    tabu_search(training_data, validation_data)
+    best_solution_string = tabu_search(training_data, validation_data)
+    print(best_solution_string)
+    best_solution = np.array(list(best_solution_string[1:-1]), dtype=int)
+    best_fitness = objective_function(best_solution, training_data, validation_data)
+    print("Best Validation Fitness: {}".format(best_fitness))
+
+
+    print("Reading in Test Data") 
+    test_data = read_text_file_alt("./Data/Test_Data.txt")
+
+
+    test_fitness = objective_function(best_solution, training_data, test_data) # check that this is correct
+    print("Test Fitness: {}".format(test_fitness))
 
 
     
