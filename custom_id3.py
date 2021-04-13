@@ -28,7 +28,11 @@ from collections import deque
 
 
 class Node:
-    """Contains the feature value,... of each node in the tree"""
+
+    """
+    Forms a node in the decision tree with the value of the splitting condition, feature value and children nodes.
+
+    """
 
     def __init__(self):
         self.value = None
@@ -38,10 +42,24 @@ class Node:
 
 
 class ID3_Decision_Tree:
-    """Decision Tree Classifier using ID3 algorithm"""
+
+    """
+    ID3 decision tree classifier.
+
+    """
 
 
     def __init__(self, data, targets):
+    
+        """
+        Initializes decision tree with given feature and target data.
+
+       Arguments:
+        - Set of features from training data used to build ID3 decision tree
+        - Set of labels for the training data
+
+        """
+
         self.node = None  # nodes
         self.data = data
         #self.feature_list = feature_list
@@ -55,6 +73,16 @@ class ID3_Decision_Tree:
     # for efficiency - pass the index rather than the whole dataset
     # data indices indicate the rows that are in play
     def calc_entropy(self, data_indices):
+
+        """
+        Calculates the entropy of the given data set.
+
+        Arguments:
+        - Set of row indices indicating which rows of the full dataset form the given data subset for which to calculate entropy
+
+        Returns:
+        - Calculated entropy of the given data subset.
+        """
       
         targets = [self.targets[i] for i in data_indices] # get list of target values for each row in current data subset
         classes = np.unique(targets)
@@ -69,6 +97,17 @@ class ID3_Decision_Tree:
     # IG(S, A) = Entropy(S) - ∑((|Sᵥ| / |S|) * Entropy(Sᵥ))
     # where Sᵥ is the set of rows in S for which the feature column A has value v, |Sᵥ| is the number of rows in Sᵥ and likewise |S| is the number of rows in S.
     def get_information_gain(self, data_indices, feature_name):
+
+        """
+        Calculates the information gain of the given feature.
+
+        Arguments:
+        - Set of row indices indicating which rows of the full dataset form the given data subset 
+        - Feature for which to calculate information gain
+
+        Returns:
+        - Information gain of the given feature with respect to the data subset
+        """
 
         total_entropy = self.calc_entropy(data_indices) # total entropy of targets/labels for whole dataset
 
@@ -101,6 +140,17 @@ class ID3_Decision_Tree:
 
     def find_max_info_gain(self, data_indices, feature_list):
 
+        """
+        Finds the maximum information gain from all the available features.
+
+        Arguments:
+        - Set of row indices indicating which rows of the full dataset form the given data subset 
+        - Feature list containing all available features to be considered
+
+        Returns:
+        - Feature corresponding to the maximum information gain
+        """
+
         information_gains = [self.get_information_gain(data_indices, feature_name)  for feature_name in feature_list]
         max_gain_feature = feature_list[information_gains.index(max(information_gains))]
     
@@ -110,12 +160,20 @@ class ID3_Decision_Tree:
 
    
 
-    # 1. Calculate the Information Gain of each feature.
-    # 2. Considering that all rows don’t belong to the same class, split the dataset S into subsets using the feature for which the Information Gain is maximum.
-    # 3. Make a decision tree node using the feature with the maximum Information gain.
-    # 4. If all rows belong to the same class, make the current node as a leaf node with the class as its label.
-    # 5. Repeat for the remaining features until we run out of all features, or the decision tree has all leaf nodes.
+
     def build_tree(self, data_indices, feature_list, node):
+
+        """
+        Builds ID3 decision tree by selecting the feature with the maximum information gain at each split.
+
+        Arguments:
+        - Set of row indices indicating which rows of the full dataset form the given data subset 
+        - Feature list containing all available features to be considered
+        - Current node in the tree
+
+        Returns:
+        - Root node of decision tree.
+        """
 
         # initialise nodes
         if not node:
@@ -177,6 +235,14 @@ class ID3_Decision_Tree:
 
     def id_3(self, feature_list):
 
+        """
+        Builds decision tree and assigns root node.
+
+        Arguments:
+        - Feature list containing all available features to be considered
+
+        """
+
         #print(data)
         data_indices = [i for i in range(len(self.data))]
         #feature_list =  self.data.columns.values[:-1] # ignore the index and target columns
@@ -189,6 +255,12 @@ class ID3_Decision_Tree:
 
 
     def print_tree(self):
+
+        """
+        Prints tree structure for visualisation.
+
+        """
+
         print("Printing tree")
         if not self.node:
             print("No node?")
@@ -213,6 +285,17 @@ class ID3_Decision_Tree:
     
 
     def predict(self, sample):
+
+        """
+        Predicts output label based on the given sample and current tree structure.
+
+        Arguments:
+        - Set of training data used to build ID3 decision tree
+        - Set of validation data used to measure accuracy on unseen data
+
+        Returns:
+        - Predicted output label for the given sample.
+        """
 
         node = self.node
 
@@ -247,6 +330,16 @@ class ID3_Decision_Tree:
     
     def predict_batch(self, samples):
 
+        """
+        Predicts the output labels for a batch of samples.
+
+        Arguments:
+        - Set of samples to perform prediction on.
+
+        Returns:
+        - Predicted output labels corresponding to the input samples.
+        """
+
         #print("Predicting...")
         #print(samples)
 
@@ -257,24 +350,6 @@ class ID3_Decision_Tree:
             predictions.append(self.predict(samples[i]))
         return predictions
         
-
-
-
-def read_text_file_alt(filename):
-    
-    data = pd.read_csv(filename, header = None) 
-    # first separate features and targets
-    features_and_target = data[0].str.split(pat=" ", expand=True)
-    data["Features"] = features_and_target[0]
-    # split features into their own columns
-    split_features = data["Features"].str.split(pat="", expand=True)
-    for i in range(split_features.shape[1]-1):
-        data[i] = split_features[i] # does this index the column??
-
-    data.drop(columns =["Features"], inplace = True) # drop old features column
-    data["Target"] = features_and_target[1]
-    print(data.head())
-    return data
 
 
 
