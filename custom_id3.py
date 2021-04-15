@@ -2,28 +2,9 @@ import math
 import numpy as np
 import pandas as pd
 from collections import deque
-#import profile
 
-#--- Implementing ID3 Decision Tree ---#
 
-# Iterative Dichotomiser 3 - iteratively dichotomizes(divides) features into two or more groups at each step
-
-# Top-down greedy approach to build a decision tree 
-# - top-down approach means that we start building the tree from the top 
-# - greedy approach means that at each iteration we select the best feature at the present moment to create a node
-
-# Most generally ID3 is only used for classification problems with nominal features only.
-
-# -- Information Gain --#
-# ID3 uses Information Gain or just Gain to find the best feature.
-# Information Gain calculates the reduction in the entropy and measures how well a given feature separates or classifies the target classes.
-# The feature with the highest Information Gain is selected as the best one.
-# Entropy is the measure of disorder and the Entropy of a dataset is the measure of disorder in the target feature of the dataset.
-
-# In the case of binary classification (where the target column has only two types of classes) entropy is 0 if all values in the target column are homogenous(similar) and will be 1 if the target column has equal number values for both the classes.
-# We denote our dataset as S, entropy is calculated as:
-# Entropy(S) = - ∑ pᵢ * log₂(pᵢ) ; i = 1 to n
-
+#--- ID3 Decision Tree ---#
 
 
 
@@ -62,7 +43,6 @@ class ID3_Decision_Tree:
 
         self.node = None  # nodes
         self.data = data
-        #self.feature_list = feature_list
         self.targets = targets
         self.target_classes = np.unique(targets)
         self.target_counts = [list(targets).count(c) for c in self.target_classes]
@@ -70,8 +50,7 @@ class ID3_Decision_Tree:
 
 
 
-    # for efficiency - pass the index rather than the whole dataset
-    # data indices indicate the rows that are in play
+ 
     def calc_entropy(self, data_indices):
 
         """
@@ -93,9 +72,7 @@ class ID3_Decision_Tree:
 
 
 
-    # information gain for specified feature column
-    # IG(S, A) = Entropy(S) - ∑((|Sᵥ| / |S|) * Entropy(Sᵥ))
-    # where Sᵥ is the set of rows in S for which the feature column A has value v, |Sᵥ| is the number of rows in Sᵥ and likewise |S| is the number of rows in S.
+ 
     def get_information_gain(self, data_indices, feature_name):
 
         """
@@ -151,6 +128,7 @@ class ID3_Decision_Tree:
         - Feature corresponding to the maximum information gain
         """
 
+        # for efficiency - pass the index rather than the whole dataset
         information_gains = [self.get_information_gain(data_indices, feature_name)  for feature_name in feature_list]
         max_gain_feature = feature_list[information_gains.index(max(information_gains))]
     
@@ -177,7 +155,6 @@ class ID3_Decision_Tree:
 
         # initialise nodes
         if not node:
-            #print("Initialising node")
             node = Node() 
 
 
@@ -185,9 +162,7 @@ class ID3_Decision_Tree:
         # if all rows belong to the same class, make the current node as a leaf node with the class as its label
         targets = [self.targets[i] for i in data_indices]
         output_classes = np.unique(targets)
-        #print(len(output_classes))
         if (len(output_classes)==1): 
-            #print("Pure node") # we are never reaching pure node - too few features for now??
             node.value = output_classes[0] # leaf node with label being the most common/probable output
             return node
 
@@ -200,8 +175,6 @@ class ID3_Decision_Tree:
     
         # calculate information gain for each feature and find maximum
         max_info_gain_feature = self.find_max_info_gain(data_indices, feature_list)
-   
-        # split dataset into subsets using the feature for which info gain is max
     
 
         # new node
@@ -243,10 +216,7 @@ class ID3_Decision_Tree:
 
         """
 
-        #print(data)
         data_indices = [i for i in range(len(self.data))]
-        #feature_list =  self.data.columns.values[:-1] # ignore the index and target columns
-        #print("Features: {}".format(feature_list))
         #print("Building tree...")
         self.node = self.build_tree(data_indices, feature_list, self.node) # root
         #print(self.node) # node is now returned
@@ -299,9 +269,6 @@ class ID3_Decision_Tree:
 
         node = self.node
 
-        #print(sample)
-
-
         while(len(node.children) > 0): # while node we are on is not a leaf node
             #print("Splitting Feature: {}".format(node.value))
             splitting_feature = node.value
@@ -309,20 +276,17 @@ class ID3_Decision_Tree:
 
       
             for child in node.children:
-                #feature_value = sample[splitting_feature].values[0]
                 feature_value = sample[splitting_feature]
                 #print("Feature Value: {}".format(feature_value)) 
                 #print("Child Value: {}".format(child.value))
                 if (feature_value==child.value):
-                    node = child.next # move to this child or move to next??
-                    #print("Moving") # on validation set -> not moving
+                    node = child.next 
                     break
 
             # check this condition
             if(node.children==None):
                 break
-            #else:
-                #print(len(node.children))
+    
         
         return node.value
 
@@ -341,12 +305,9 @@ class ID3_Decision_Tree:
         """
 
         #print("Predicting...")
-        #print(samples)
 
-        #predictions = [self.predict(samples.iloc[[i]]) for i in range(samples.shape[0])]
         predictions = []
         for i in range(len(samples)):
-            #print(samples.iloc[[i]])
             predictions.append(self.predict(samples[i]))
         return predictions
         
