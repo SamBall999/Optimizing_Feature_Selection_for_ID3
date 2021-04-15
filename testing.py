@@ -2,10 +2,29 @@
 from scipy.stats import mannwhitneyu
 
 
+def one_sided_mann_whitney(tabu_data, ga_data):
+
+    """
+    Performs statistical hypothesis test for two sets of independent samples.
+
+    Arguments:
+    - Test accuracies obtained from feature subset selected using tabu search
+    - Test accuracies obtained from feature subset selected using genetic algorithm
+
+    Returns:
+    - Statistic and p value from one-sided Mann-Whitney test.
+    """
+
+    stat, p = mannwhitneyu(tabu_data, ga_data)
+    print("U Statistic: {}".format(stat))
+    print("p-value: {}".format(p))
+
+    return stat, p
 
 
 
-def mann_whitney(tabu_data, ga_data):
+
+def two_sided_mann_whitney(tabu_data, ga_data):
 
     """
     Performs statistical hypothesis test for two sets of independent samples.
@@ -18,11 +37,12 @@ def mann_whitney(tabu_data, ga_data):
     - Statistic and p value from Mann-Whitney test.
     """
 
-    stat, p = mannwhitneyu(tabu_data, ga_data)
-    print(stat)
-    print(p)
+    stat, p = mannwhitneyu(tabu_data, ga_data, alternative='two-sided')
+    print("U Statistic: {}".format(stat))
+    print("p-value: {}".format(p))
 
     return stat, p
+
 
 
 
@@ -95,7 +115,7 @@ def confusion_matrix(targets, predictions):
     print("Precision: {}".format(precision(TP, FP, TN, FN)))
     print("\n")
 
-    return(TP, FP, TN, FN)
+    return TP, FP, TN, FN
 
 
 # Accuracy - measures overall accuracy of the model classification
