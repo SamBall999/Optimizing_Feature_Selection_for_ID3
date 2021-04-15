@@ -137,7 +137,6 @@ def k_flip(x, indices):
 
 
 
-# possibly the k flip neighbourhood? -> all bitstrings that have k=2 bit flips (NB this is an extra hyperparameter)
 def find_neighbourhood(current_x):
 
     """
@@ -156,7 +155,6 @@ def find_neighbourhood(current_x):
         x_copy = current_x
         #neighbourhood.append(one_flip(x_copy, i))
         interval = int(len(current_x)/3)
-        print(interval)
         indices = [i, i+interval, i+(2*interval)]
         for j in range(len(indices)):
           if (indices[j] > len(current_x)-1):
@@ -175,8 +173,7 @@ def find_neighbourhood(current_x):
 
 
 
-# The procedure will select the best local candidate (although it has worse fitness than the sBest) in order to escape the local optimal.
-# keep a separate ultimate best but still allow to escape local optima
+
 def tabu_search(training_data, validation_data):
 
     """
@@ -205,7 +202,7 @@ def tabu_search(training_data, validation_data):
     x_current_string = str(x_current).replace(" ", "")
     tabu_list.append(x_current_string.replace("\n", ""))  # add curent solution to tabu list
     #print(tabu_list)
-    max_tabu_size = 4 # set maximum tabu list size (hyperparameter)
+    max_tabu_size = 8 # set maximum tabu list size (hyperparameter)
 
     # while max number of iterations has not been reached
     while (t < t_max):
@@ -241,7 +238,7 @@ def tabu_search(training_data, validation_data):
         # check if max tabu list size exceeded
         if (len(tabu_list) > max_tabu_size):
             tabu_list = tabu_list[1:] # remove the first element of the list
-        print(tabu_list)
+        #print(tabu_list)
         t +=1  # move to next iteration
 
     return x_best # the best solution seen during the search process is returned
@@ -271,7 +268,7 @@ def read_text_file_alt(filename):
 
     data.drop(columns =["Features"], inplace = True) # drop old features column
     data["Target"] = features_and_target[1] # create target column
-    print(data.head())
+    #print(data.head())
     return data
 
 
@@ -293,14 +290,14 @@ def main():
     training_data = read_text_file_alt("./Data/Training_Data.txt") # read in the training data
 
 
-    print("Reading in Validation Data") 
+    print("Reading in validation dataset...") 
     validation_data = read_text_file_alt("./Data/Validation_Data.txt")  # read in the validation data
 
 
     # run tabu search on the given datasets
-    best_solution_string = tabu_search(training_data, validation_data)
+    best_solution = tabu_search(training_data, validation_data)
+    best_solution_string = str(best_solution).replace(" ", "").replace("\n", "")
     print(best_solution_string)
-    best_solution = np.array(list(best_solution_string[1:-1]), dtype=int)
     best_fitness = objective_function(best_solution, training_data, validation_data)
     print("Best Validation Fitness: {}".format(best_fitness))
 

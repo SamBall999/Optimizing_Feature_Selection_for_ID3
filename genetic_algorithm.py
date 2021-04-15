@@ -7,8 +7,6 @@ from testing import calculate_rates, accuracy
 #----GENETIC ALGORITHM (GA)----#
 
 
-# potential downside of GA compared to tabu -> more function evals
-
 
 # Objectives: maximize classification accuracy of the feature subset. 
 def fitness_function(individual, training_data, validation_data):
@@ -111,13 +109,11 @@ def two_point_crossover_mask(n_x):
     crossover_points = np.random.choice(possible_points,  2, replace = False) # select crossover points, no replacement
     e_1 = min(crossover_points)
     e_2 = max(crossover_points)
-    print(crossover_points)
     mask = np.zeros(n_x, dtype=int)
     j = e_1 + 1
     while (j < e_2):
         mask[j] = 1 # assign this range to 1's
         j+=1
-    print(mask)
     return mask
 
 
@@ -241,24 +237,33 @@ def roulette_wheel_selection(population, fitness_sum, population_fitnesses):
 
 def tournament_selection(population, population_fitnesses):
 
+    """
+    Selects a parent chromosome based on tournament selection.
 
-    n_t = int(len(population)/5)
+    Arguments:
+    - Population of possible solutions
+    - Dictionary containing fitnesses of each individual in the population
+
+    Returns:
+    - Selected parent from population
+    """
+
+
+    n_t = int(len(population)/5) # tournament size hyperparameter
     tournament_indices = list(np.random.randint(0, len(population)-1, n_t))
     tournament = [population[t] for t in tournament_indices]
-    # can we calc less fitnesses this way?
     tournament_fitnesses = [population_fitnesses[str(t).replace(" ", "").replace("\n", "")] for t in tournament]
     max_fitness = max(tournament_fitnesses)
     max_index = tournament_fitnesses.index(max_fitness) 
     chosen_individual = tournament[max_index]
-    print(chosen_individual)
-    print(max_fitness)
+    #print(chosen_individual)
+    #print(max_fitness)
 
     return chosen_individual
 
 
 
-# choose fitter individuals for reproduction -> should also try rank-based at some point
-# (i) Roulette wheel selection - with or without replacement??
+
 def parent_selection(population, population_fitnesses):
 
     """
@@ -273,8 +278,6 @@ def parent_selection(population, population_fitnesses):
     """
 
     print("Parent selection")
-    # how many parents to select?? - for now we select 2 parents -> 2 children
-    # therefore select no. of parents = half of pop?
     num_parents = int(len(population)/2)
     if(num_parents%2 != 0):
         num_parents = num_parents+1
@@ -292,53 +295,8 @@ def parent_selection(population, population_fitnesses):
 
 
 
-def select_new_gen(parents, children, population, population_fitnesses, training_data, validation_data):
-
-    """
-    Selects a set of parents from the population.
-
-    Arguments:
-    - Population of possible solutions
-    - Dictionary containing fitnesses of each individual in the population
-
-    Returns:
-    - Selected parents 
-    """
-
-    new_generation = []
-    no_children =  len(children)
-    sorted_parents = sorted(population_fitnesses, key=population_fitnesses.get, reverse=False)
-
-    print(sorted_parents)
-    
-    #print(parent, population_fitnesses[parent])
-    
-    i = 0
-    for c in children:
-        child_fitness = fitness_function(c, training_data, validation_data)
-        for i in range(len(parents)):
-            if (child_fitness > population_fitnesses[sorted_parents[i]]):
-                new_generation.append(c)
-                break
-    
-    num_new_individuals = len(new_generation)
-    print(num_new_individuals)
-    print(sorted_parents[num_new_individuals:])
-    for parent in sorted_parents[num_new_individuals:]:
-        parent_array = np.array(list(parent[1:-1]), dtype=int)
-        new_generation.append(parent_array)
-    print(new_generation) # what about remaining population who were not parents??
-    remaining_pop = [i for i in population if str(i).replace(" ", "") not in sorted_parents]
-    print(remaining_pop)
-    new_generation.append(remaining_pop)
-
-    return new_generation
-
-    #child_fitness = fitness_function(child, training_data, validation_data)
 
 
-
- # could use Boltzmann selection to decide if offspring replaces parent
 def reproduction(population, population_fitnesses, p_c, p_m, training_data, validation_data):
 
     """
@@ -356,7 +314,7 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
 
     # select parents using selection operator
     selected_parents = parent_selection(population, population_fitnesses)
-    print("No. of parents {}".format(len(selected_parents)))
+    #print("No. of parents {}".format(len(selected_parents)))
 
 
     n_x = len(population[0]) # number of features
@@ -373,7 +331,7 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
             children = [mutate(c, p_m) for c in children]
             # determine whether offspring are accepted into population
             for c in children:
-                removed_individuals = parent_offspring_competition(c, selected_parents[i], selected_parents[i+1], removed_individuals, population, population_fitnesses, training_data, validation_data)
+                removed_individuals = replacement_strategy(c, removed_individuals, population, population_fitnesses, training_data, validation_data)
     
         i += 2
 
@@ -381,110 +339,21 @@ def reproduction(population, population_fitnesses, p_c, p_m, training_data, vali
 
 
 
-
-"""def parent_offspring_competition(child, parent_1, parent_2, removed_individuals, population, population_fitnesses, training_data, validation_data):
-
-
-    Decides whether the offspring will be included as part of the new generation based on its fitness relative to parents.
-
-    Arguments:
-    - Offspring chromosome
-    - First parent chromosome
-    - Second parent chromosome
-    - Population of possible solutions
-    - Dictionary containing fitnesses of each individual in the population
-    - Set of training data used to build ID3 decision tree
-    - Set of validation data used to measure accuracy on unseen data
-
-    Returns:
-    - Modified population 
-
-
-    print("Replacement strategy")
-    print("Population size {}".format(len(population)))
-
-    #fitness_p_1 = fitness_function(parent_1, training_data, validation_data)
-    p1_string = str(parent_1).replace(" ", "")
-    p1_string = p1_string.replace("\n", "")
-    fitness_p_1= population_fitnesses[p1_string]
-    #print(fitness_p_1)
-    p2_string = str(parent_2).replace(" ", "")
-    p2_string = p2_string.replace("\n", "")
-    fitness_p_2= population_fitnesses[p2_string]
-    #print(fitness_p_2)
-    #fitness_p_2 = fitness_function(parent_2, training_data, validation_data)
-    worst_parent = parent_1
-    worst_parent_string = str(worst_parent).replace(" ", "")
-    worst_parent_string = worst_parent_string.replace("\n", "")
-    worst_fitness = fitness_p_1
-
-    if(fitness_p_1 > fitness_p_2):
-        worst_parent = parent_2
-        worst_fitness = fitness_p_2
- 
-
-    # if child better than worst parent, remove worst parent and add child
-    child_fitness = fitness_function(child, training_data, validation_data)
-    #print(child_fitness)
-    if (fitness_function(child, training_data, validation_data) > worst_fitness):
-        #population.replace(worst_parent, child)
-        #population = np.where(population == worst_parent, child, population)
-        print("Improvement")
-        
-        if (worst_parent_string not in removed_individuals):
-            for i in range(len(population)): 
-                # if the worst parent hasn't already been removed - remove it and break the loop
-                if((population[i]==worst_parent).all()):
-                    population.pop(i)
-                    print("worst parent found and removed")
-                    removed_individuals.append(worst_parent_string)
-                    break
-
-        else:    
-            worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
-            print(worst_individual_string)
-            i = 0
-            while(worst_individual_string in removed_individuals):
-                worst_individual_string = sorted(population_fitnesses,  key=population_fitnesses.get, reverse=False)[i]
-                print(worst_individual_string)
-                i += 1
-                #worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
-            worst_individual = np.array(list(worst_individual_string[1:-1]),  dtype=int)
-            for i in range(len(population)): 
-                if((population[i]==worst_individual).all()):
-                    print("Worst individual removed")
-                    population.pop(i)
-                    removed_individuals.append(worst_individual_string)
-                    break
-        
-        population.append(child)
-
-
-    # else do nothing
-    print("Population size {}".format(len(population)))
-
-    #return population
-    print(removed_individuals)
-    return removed_individuals"""
-
-
-
-def parent_offspring_competition(child, parent_1, parent_2, removed_individuals, population, population_fitnesses, training_data, validation_data):
+def replacement_strategy(child, removed_individuals, population, population_fitnesses, training_data, validation_data):
 
     """
-    Decides whether the offspring will be included as part of the new generation based on its fitness relative to parents.
+    Decides whether the offspring will be included as part of the new generation based on its fitness relative to the worst individual in the population.
 
     Arguments:
     - Offspring chromosome
-    - First parent chromosome
-    - Second parent chromosome
+    - List of individuals that have been removed from population
     - Population of possible solutions
     - Dictionary containing fitnesses of each individual in the population
     - Set of training data used to build ID3 decision tree
     - Set of validation data used to measure accuracy on unseen data
 
     Returns:
-    - Modified population 
+    - List of removed individuals
     """
 
     print("Replacement strategy")
@@ -503,8 +372,7 @@ def parent_offspring_competition(child, parent_1, parent_2, removed_individuals,
 
     # if child better than worst individual, remove worst individual
     if (fitness_function(child, training_data, validation_data) > worst_fitness):
-        #population.replace(worst_parent, child)
-        #population = np.where(population == worst_parent, child, population)
+      
         print("Improvement")
        
         #worst_individual_string = min(population_fitnesses, key= population_fitnesses.get)
@@ -519,23 +387,13 @@ def parent_offspring_competition(child, parent_1, parent_2, removed_individuals,
         population.append(child)
 
 
-    # else do nothing
-    #print("Population size {}".format(len(population)))
 
-    #return population
-    #print(removed_individuals)
     return removed_individuals
 
 
 
     
 
-
-
-
-# potential stopping conditions 
-# limited number of generations or function evaluation
-# when population has converged e.g. no improvement observed
 
 def genetic_algorithm(training_data, validation_data):
 
@@ -551,14 +409,14 @@ def genetic_algorithm(training_data, validation_data):
     """
 
     
-    n_x = 10 # 100
+    n_x = 100 # 100
     gen_counter = 0 # generation counter
-    max_gens = 2
-    population_size = 10 # maybe 10*n_x but start small
+    max_gens = 7
+    population_size = 25 
     population = [np.random.randint(0, 2, n_x) for individual in range(population_size)] # initialize nx-dimensional population of given population size ns
 
 
-    p_c = 0.9 # high prob of crossover
+    p_c = 0.95 # high prob of crossover
     p_m = 0.1 # lower prob of mutation
 
     population_fitnesses = {}

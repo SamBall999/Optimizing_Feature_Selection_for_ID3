@@ -1,11 +1,10 @@
-# Hypothesis testing and metrics
 from scipy.stats import mannwhitneyu
 
 
 def one_sided_mann_whitney(tabu_data, ga_data):
 
     """
-    Performs statistical hypothesis test for two sets of independent samples.
+    Performs one sided statistical hypothesis test for two sets of independent samples.
 
     Arguments:
     - Test accuracies obtained from feature subset selected using tabu search
@@ -27,7 +26,7 @@ def one_sided_mann_whitney(tabu_data, ga_data):
 def two_sided_mann_whitney(tabu_data, ga_data):
 
     """
-    Performs statistical hypothesis test for two sets of independent samples.
+    Performs two sided statistical hypothesis test for two sets of independent samples.
 
     Arguments:
     - Test accuracies obtained from feature subset selected using tabu search
@@ -64,7 +63,6 @@ def calculate_rates(targets, predictions):
     TN = 0
     FN = 0
 
-    # quicker way?
 
     for i in range(len(predictions)): 
         if (targets[i]==predictions[i]=="True"):
