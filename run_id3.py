@@ -1,23 +1,13 @@
-# main class
-
 import numpy as np
 import pandas as pd
-from id3 import ID3_Decision_Tree # better way to do this?
-from testing import confusion_matrix
-#from tabu_hill_search import tabu_search
-#from genetic_algorithm import genetic_algorithm
-#from statistical_tests import hypothesis_test
-
-# Design decisions
-# 1. How to compare algorithms properly using statistical tests
-# - from lectures: often Mann-Whitney 
-# - (usually a two-sample situation since comparing algs A and B, usually performance results are not normally distributed but must check for this first, usually independent samples since starting positions random)
-# - choices: Chi-sq, Mann-Whitney, Median, Kolmogorov
-# - from paper: Wilcoxon test - implies samples are paired??
-# 2. How many times to run algorithms
+from custom_id3 import ID3_Decision_Tree
+from testing import calculate_rates, accuracy
 
 
-# how best to store these features and target?
+
+
+
+
 def read_text_file(filename):
     data_file = open(filename,"r")
     data = []
@@ -30,8 +20,18 @@ def read_text_file(filename):
     return data
 
 
-# alternative - use pandas??
+
 def read_text_file_alt(filename):
+
+    """
+    Reads in the dataset from a text file and stores in a dataframe.
+
+    Arguments:
+    - Filename of text file containing dataset
+
+    Returns:
+    - Dataframe containing features and target values split into columns.
+    """
     
     data = pd.read_csv(filename, header = None) 
     # first separate features and targets
@@ -44,7 +44,7 @@ def read_text_file_alt(filename):
 
     data.drop(columns =["Features"], inplace = True) # drop old features column
     data["Target"] = features_and_target[1]
-    print(data.head())
+    #print(data.head())
     return data
 
 
@@ -56,32 +56,39 @@ def main():
     print("\nReading in training dataset...")
     training_data = read_text_file_alt("./Data/Training_Data.txt")
 
-    #print(len(training_data[training_data["Target"]=="True"]))
-    #print(len(training_data[training_data["Target"]=="False"]))
 
-    tree = ID3_Decision_Tree() # intialize decision tree
-    #tree.id_3(training_data.iloc[:, : 40]) # test with a smaller subset to begin with, builds tree
-    tree.id_3(training_data.iloc[:, [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, -1]]) # don't forget to include target
-    # how do we test or print this tree?
-    #tree.print_tree()
+    print("\nFeature list:")
+    feature_list =  training_data.columns.values[:-1]
+    print(feature_list)
+  
+    # convert x and y data to numpy arrays
+    x = np.array(training_data.drop("Target", axis=1).copy())
+    y = np.array(training_data["Target"])
+
+    # create decision tree with given subset
+    tree = ID3_Decision_Tree(x, y) # intialize decision tree
+    tree.id_3(feature_list) # build tree
+
    
-    #predictions = tree.predict_batch(training_data)
-    #print(predictions)
-    #targets = training_data["Target"].values
-    #print(targets)
-    #print("\nPredicted value: {}".format(prediction))
-    #print("Actual value: {}".format(target))
-    #confusion_matrix(targets, predictions)
+    # verify if training accuracy is 100% (overfitting is occurring)
+    predictions = tree.predict_batch(x)
+    targets = training_data["Target"].values
+    TP, FP, TN, FN = calculate_rates(targets, predictions)
+    training_accuracy = accuracy(TP, FP, TN, FN)
+    print("\nTraining Accuracy: {}".format(training_accuracy))
+
+    print("\nReading in Test Data") 
+    test_data = read_text_file_alt("./Data/Test_Data.txt")
+
+    # calculate accuracy on the test set
+    X_test = np.array(test_data.drop("Target", axis=1).copy())
+    test_predictions = tree.predict_batch(X_test)
+    test_targets = test_data["Target"].values
+    TP, FP, TN, FN = calculate_rates(test_targets, test_predictions) # calculate number of true positives, false positives etc.
+    test_accuracy = accuracy(TP, FP, TN, FN) 
+    print("Test Accuracy: {}\n".format(test_accuracy))
 
 
-    print("Reading in Validation Data") # or should it be test data??
-    validation_data = read_text_file_alt("./Data/Validation_Data.txt")
-
-    validation_predictions = tree.predict_batch(validation_data)
-    #print(validation_predictions)
-    validation_targets = validation_data["Target"].values
-    #print(validation_targets)
-    #confusion_matrix(validation_targets, validation_predictions)
 
 
     
