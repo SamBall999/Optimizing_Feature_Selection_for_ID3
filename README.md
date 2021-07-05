@@ -12,3 +12,8 @@ Improving ID3 decision tree algorithm through optimized feature selection using 
 
 
 ### Genetic Algorithm
+
+
+### Results
+
+<img src="ts_ga_performance_distribution.png" alt="performance distributions." width="450"/>
