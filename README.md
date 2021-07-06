@@ -55,3 +55,8 @@ To further investigate the classification performance, the confusion matrices ob
 
 
 Furthermore, the feature subsets found from the tabu search exhibit significantly more reliable and advantageous results as an average of **90.5%** accuracy is obtained on the test set. This translates to a **2.4%** improvement in accuracy over the baseline accuracy obtained from all 100 input features.
+
+
+### Report
+
+Improving ID3 through Optimized Feature Selection
