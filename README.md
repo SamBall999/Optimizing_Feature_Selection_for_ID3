@@ -51,9 +51,7 @@ This is confirmed by a Mann-Whitney U Test which indicates that the test accurac
 To further investigate the classification performance, the confusion matrices obtained by the best subset from each algorithm are included below.
 
 
-<img src="tabu_confusion_matrix.png" alt="performance distributions." width="400"/>
-
-<img src="ga_confusion_matrix.png" alt="performance distributions." width="400"/>
+<img src="confusion_matrices.png" alt="confusion matrices" width="450"/>
 
 
 Furthermore, the feature subsets found from the tabu search exhibit significantly more reliable and advantageous results as an average of **90.5%** accuracy is obtained on the test set. This translates to a **2.4%** improvement in accuracy over the baseline accuracy obtained from all 100 input features.
