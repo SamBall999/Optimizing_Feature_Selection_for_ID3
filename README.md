@@ -7,26 +7,38 @@ In this investigation we compare the efficacy of the tabu search and genetic alg
 
 ### ID3 Decision Tree
 
-The Iterative Dichotomiser 3 (ID3) classifier is a well-known decision tree algorithm that uses the *information gain* to select the optimal feature as the splitting condition. However, a major drawback of the ID3 is the tendency of the classifier to overfit. 
+The *Iterative Dichotomiser 3 (ID3)* classifier is a well-known decision tree algorithm that uses the *information gain* to select the optimal feature as the splitting condition. However, a major drawback of the ID3 is the tendency of the classifier to overfit. 
 
 In order to overcome this limitation and increase the efficiency of the decision tree structure, feature subset selection can be employed. This introduces
-the problem of selecting an optimal feature subset which will retain sufficient information to correctly classify data while reducing overfitting.
+the problem of selecting an optimal feature subset which will retain sufficient information to correctly classify data while reducing overfitting. 
 
 Due to the vast number of potential feature combinations, optimization techniques such as local search or evolutionary techniques can provide a valuable solution.
 
 
+
 ### Tabu Search
 
-Tabu search is a classic search approach which employs a local search procedure to iteratively move from one potential solution to an improved solution in the neighbourhood. Tabu search provides an extension to the classic hill climbing approach by constructing a tabu list of solutions that have been recently visited and are prohibited from being chosen again, as well as allowing the search to escape local optima by selecting a suboptimal movement.
+*Tabu search* is a classic search approach which employs a local search procedure to iteratively move from one potential solution to an improved solution in the neighbourhood. Tabu search provides an extension to the classic hill climbing approach by constructing a tabu list of solutions that have been recently visited and are prohibited from being chosen again, as well as allowing the search to escape local optima by selecting a suboptimal movement.
 
-For the feature selection problem, each solution is encoded as a bitstring with length equal to the total number of available features. Each bit in the bit string
-indicates whether that feature is chosen or not.
+#### Encoding
+
+- For the feature selection problem, each solution is encoded as a bitstring with length equal to the total number of available features. 
+- Each bit in the bit string indicates whether that feature is chosen or not.
+
 
 
 
 ### Genetic Algorithm
 
-Genetic algorithms are a population-based approach to optimization inspired by Darwinian evolution and form a subset of the larger class of evolutionary computation. Tournament selection, two-point crossover and random mutation were chosen as the final operators.
+*Genetic algorithms* are a population-based approach to optimization inspired by Darwinian evolution and form a subset of the larger class of evolutionary computation. 
+
+#### Genetic Operators 
+
+- Tournament selection
+- Two-point crossover 
+- Random mutation
+
+
 
 ### Results
 
@@ -39,9 +51,9 @@ This is confirmed by a Mann-Whitney U Test which indicates that the test accurac
 To further investigate the classification performance, the confusion matrices obtained by the best subset from each algorithm are included below.
 
 
-<img src="tabu_confusion_matrix.png" alt="performance distributions." width="450"/>
+<img src="tabu_confusion_matrix.png" alt="performance distributions." width="400"/>
 
-<img src="ga_confusion_matrix.png" alt="performance distributions." width="450"/>
+<img src="ga_confusion_matrix.png" alt="performance distributions." width="400"/>
 
 
 Furthermore, the feature subsets found from the tabu search exhibit significantly more reliable and advantageous results as an average of **90.5%** accuracy is obtained on the test set. This translates to a **2.4%** improvement in accuracy over the baseline accuracy obtained from all 100 input features.
